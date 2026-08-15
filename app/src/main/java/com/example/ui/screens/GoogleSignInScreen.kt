@@ -63,7 +63,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.data.firebase.AuthState
 import com.example.ui.theme.ElectricBlue
-import com.example.ui.theme.ElectricCyan
+import com.example.ui.theme.EnergyCyan
 import com.example.ui.theme.SuccessGreen
 import com.example.viewmodel.MeterViewModel
 
@@ -182,13 +182,13 @@ fun GoogleSignInScreen(
                                 )
                             )
                         )
-                        .border(2.dp, ElectricCyan.copy(alpha = 0.7f), CircleShape),
+                        .border(2.dp, EnergyCyan.copy(alpha = 0.7f), CircleShape),
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
                         imageVector = Icons.Default.FlashOn,
                         contentDescription = "Power Meter",
-                        tint = ElectricCyan,
+                        tint = EnergyCyan,
                         modifier = Modifier.size(44.dp)
                     )
                 }
@@ -297,7 +297,7 @@ fun GoogleSignInScreen(
                                 Icon(
                                     imageVector = Icons.Default.CloudDone,
                                     contentDescription = "Cloud",
-                                    tint = ElectricCyan,
+                                    tint = EnergyCyan,
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Spacer(modifier = Modifier.width(8.dp))
@@ -371,7 +371,7 @@ fun GoogleSignInScreen(
                                     Icon(
                                         imageVector = Icons.Default.CloudSync,
                                         contentDescription = "Sync",
-                                        tint = ElectricCyan,
+                                        tint = EnergyCyan,
                                         modifier = Modifier.size(20.dp)
                                     )
                                 }
@@ -463,13 +463,13 @@ fun GoogleSignInScreen(
                         ) {
                             CircularProgressIndicator(
                                 modifier = Modifier.size(20.dp),
-                                color = ElectricCyan,
+                                color = EnergyCyan,
                                 strokeWidth = 2.dp
                             )
                             Spacer(modifier = Modifier.width(10.dp))
                             Text(
                                 text = "Signing in with Google...",
-                                color = ElectricCyan,
+                                color = EnergyCyan,
                                 fontSize = 13.sp,
                                 fontWeight = FontWeight.SemiBold
                             )
