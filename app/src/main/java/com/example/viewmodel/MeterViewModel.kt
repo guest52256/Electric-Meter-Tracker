@@ -24,6 +24,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
@@ -108,28 +109,42 @@ class MeterViewModel(
         viewModelScope.launch {
             val result = authManager.signInWithGoogle(activityContext)
             if (result.isSuccess) {
+                android.widget.Toast.makeText(activityContext, "Signed in successfully", android.widget.Toast.LENGTH_SHORT).show()
                 // Immediately trigger full cloud sync with newly authenticated token
                 repository.firestoreSyncManager.forcePushAllData()
+            } else {
+                android.widget.Toast.makeText(activityContext, "Sign in failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    fun signInAnonymously() {
+    fun signInAnonymously(context: Context) {
         viewModelScope.launch {
             val result = authManager.signInAnonymously()
             if (result.isSuccess) {
+                android.widget.Toast.makeText(context, "Continuing as Guest", android.widget.Toast.LENGTH_SHORT).show()
                 repository.firestoreSyncManager.forcePushAllData()
+            } else {
+                android.widget.Toast.makeText(context, "Guest sign in failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
             }
         }
     }
 
-    fun signOut() {
+    fun signOut(context: Context) {
         authManager.signOut()
+        android.widget.Toast.makeText(context, "Signed out", android.widget.Toast.LENGTH_SHORT).show()
     }
 
-    fun forcePushAllData() {
+    fun forcePushAllData(context: Context) {
         viewModelScope.launch(Dispatchers.IO) {
-            repository.firestoreSyncManager.forcePushAllData()
+            val result = repository.firestoreSyncManager.forcePushAllData()
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    android.widget.Toast.makeText(context, "Data synced to Firestore successfully!", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    android.widget.Toast.makeText(context, "Sync Error: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
         }
     }
 

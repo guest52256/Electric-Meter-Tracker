@@ -187,7 +187,7 @@ fun FirebaseCloudDialog(
 
                             if (currentUser != null) {
                                 OutlinedButton(
-                                    onClick = { viewModel.signOut() },
+                                    onClick = { viewModel.signOut(context) },
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                     modifier = Modifier.height(28.dp)
@@ -382,7 +382,7 @@ fun FirebaseCloudDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.forcePushAllData() },
+                        onClick = { viewModel.forcePushAllData(context) },
                         enabled = !syncStatus.isSyncing,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(

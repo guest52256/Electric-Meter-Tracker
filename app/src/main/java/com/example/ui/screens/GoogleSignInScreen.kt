@@ -131,44 +131,6 @@ fun GoogleSignInScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
-                // Top skip button
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.End
-                ) {
-                    Surface(
-                        color = Color(0xFF1E293B).copy(alpha = 0.8f),
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable { onContinue() }
-                            .border(1.dp, Color(0xFF38BDF8).copy(alpha = 0.3f), RoundedCornerShape(20.dp))
-                    ) {
-                        Row(
-                            modifier = Modifier.padding(horizontal = 14.dp, vertical = 6.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(
-                                text = "Continue as Guest",
-                                style = MaterialTheme.typography.labelSmall.copy(
-                                    fontWeight = FontWeight.SemiBold,
-                                    fontSize = 11.sp
-                                ),
-                                color = Color(0xFF94A3B8)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
-                            Icon(
-                                imageVector = Icons.Default.ArrowForward,
-                                contentDescription = "Skip",
-                                tint = Color(0xFF94A3B8),
-                                modifier = Modifier.size(12.dp)
-                            )
-                        }
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(16.dp))
-
                 // Brand Emblem
                 Box(
                     modifier = Modifier
@@ -319,7 +281,7 @@ fun GoogleSignInScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
-                                onClick = { viewModel.signOut() },
+                                onClick = { viewModel.signOut(context) },
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -328,7 +290,7 @@ fun GoogleSignInScreen(
 
                             Button(
                                 onClick = {
-                                    viewModel.forcePushAllData()
+                                    viewModel.forcePushAllData(context)
                                     onContinue()
                                 },
                                 shape = RoundedCornerShape(10.dp),
@@ -550,7 +512,7 @@ fun GoogleSignInScreen(
                     // Fallback Anonymous / Guest auth button
                     OutlinedButton(
                         onClick = {
-                            viewModel.signInAnonymously()
+                            viewModel.signInAnonymously(context)
                             onContinue()
                         },
                         shape = RoundedCornerShape(12.dp),
@@ -560,7 +522,7 @@ fun GoogleSignInScreen(
                             .testTag("continue_as_guest_button")
                     ) {
                         Text(
-                            text = "Continue with Offline / Anonymous Sync",
+                            text = "Continue as Guest",
                             color = Color(0xFF94A3B8),
                             fontSize = 13.sp,
                             fontWeight = FontWeight.Medium

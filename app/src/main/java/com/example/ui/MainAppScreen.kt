@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
@@ -183,6 +184,38 @@ fun MainAppScreen(
                     )
                 },
                 actions = {
+                    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+                    
+                    // Account / Sign-In button
+                    IconButton(
+                        onClick = { showAuthScreen = true },
+                        modifier = Modifier.testTag("top_bar_account_button")
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(34.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.tertiaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (currentUser != null && currentUser?.isAnonymous == false) {
+                                Text(
+                                    text = currentUser?.displayName?.firstOrNull()?.uppercase() ?: "G",
+                                    color = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 15.sp
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Default.AccountCircle,
+                                    contentDescription = "Sign In",
+                                    tint = MaterialTheme.colorScheme.onTertiaryContainer,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
                     // Theme / Palette / Dark Mode selector button
                     IconButton(
                         onClick = { viewModel.openThemeDialog() },
