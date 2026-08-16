@@ -55,6 +55,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.BannerAdView
 import com.example.model.DailyReading
 import com.example.ui.components.EditReadingDialog
 import com.example.ui.components.FirebaseSyncBanner
@@ -295,6 +296,11 @@ fun DashboardScreen(
                         onEditClick = { viewModel.startEditingReading(reading) }
                     )
                 }
+            }
+
+            // Always display Banner Ad cleanly at the bottom
+            item {
+                BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
             }
         }
 

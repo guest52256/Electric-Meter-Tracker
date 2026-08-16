@@ -98,8 +98,14 @@ class MeterViewModel(
     // FIRESTORE CLOUD PERSISTENCE & DIALOGS
     // ----------------------------------------------------
     val syncStatus: StateFlow<CloudSyncStatus> = repository.firestoreSyncManager.syncStatus
+    val autoSyncCountdown: StateFlow<Int?> = repository.firestoreSyncManager.autoSyncCountdown
+    val autoSyncActivityName: StateFlow<String> = repository.firestoreSyncManager.autoSyncActivityName
     val showCloudDialog = MutableStateFlow(false)
     val showDeveloperDialog = MutableStateFlow(false)
+
+    fun triggerAutoSync(activityDescription: String = "User Activity") {
+        repository.firestoreSyncManager.triggerActivityAutoSync(activityDescription)
+    }
 
     // Firebase Auth & Google Sign-In
     val authManager: com.example.data.firebase.FirebaseAuthManager = repository.firestoreSyncManager.authManager
@@ -236,14 +242,22 @@ class MeterViewModel(
     val alertReadings: StateFlow<List<DailyReading>> = repository.alertReadings
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
 
+    val unitThreshold: StateFlow<Double> = repository.unitThreshold
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100.0)
+
+    fun updateUnitThreshold(threshold: Double) {
+        repository.updateUnitThreshold(threshold)
+    }
+
     // ----------------------------------------------------
     // DASHBOARD OVERVIEW AGGREGATION
     // ----------------------------------------------------
     val dashboardOverview: StateFlow<DashboardOverviewState> = combine(
         activeMeters,
         billingCycles,
-        allReadings
-    ) { meters, cycles, readings ->
+        allReadings,
+        unitThreshold
+    ) { meters, cycles, readings, threshold ->
         val meterCards = meters.map { meter ->
             val cycle = cycles.find { it.meterId == meter.id }
             val readingsForMeter = readings.filter { it.meterId == meter.id }.sortedByDescending { it.timestamp }
@@ -252,7 +266,7 @@ class MeterViewModel(
             val prevBill = cycle?.previousBillReading ?: 0.0
             val currentR = latest?.currentReading ?: prevBill
             val units = latest?.unitsSinceBill ?: (currentR - prevBill).coerceAtLeast(0.0)
-            val isAlert = units >= 100.0
+            val isAlert = units >= threshold
             val dateStr = latest?.dateString ?: cycle?.cycleStartFormattedDate ?: "N/A"
 
             MeterDashboardCardState(
@@ -352,13 +366,17 @@ class MeterViewModel(
             )
 
             result.onSuccess { saved ->
-                addReadingSuccessMessage.value = "Reading added successfully! Units: ${saved.unitsSinceBill.toInt()}"
-                addReadingCurrentInput.value = ""
-                addReadingNotes.value = ""
-                addReadingError.value = null
-                onSuccess(saved)
+                withContext(Dispatchers.Main) {
+                    addReadingSuccessMessage.value = "Reading added successfully! Units: ${saved.unitsSinceBill.toInt()}"
+                    addReadingCurrentInput.value = ""
+                    addReadingNotes.value = ""
+                    addReadingError.value = null
+                    onSuccess(saved)
+                }
             }.onFailure { error ->
-                addReadingError.value = error.message ?: "Failed to save reading"
+                withContext(Dispatchers.Main) {
+                    addReadingError.value = error.message ?: "Failed to save reading"
+                }
             }
         }
     }
@@ -401,10 +419,12 @@ class MeterViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             repository.updateBillingCycle(meterId, newBillReading)
-            billCycleStatusMessage.value = "Previous Bill Reading updated to $newBillReading"
-            billCycleNewReadingInput.value = ""
-            billCycleError.value = null
-            onSuccess()
+            withContext(Dispatchers.Main) {
+                billCycleStatusMessage.value = "Previous Bill Reading updated to $newBillReading"
+                billCycleNewReadingInput.value = ""
+                billCycleError.value = null
+                onSuccess()
+            }
         }
     }
 
@@ -455,11 +475,15 @@ class MeterViewModel(
             )
 
             result.onSuccess { updated ->
-                billCycleStatusMessage.value = "Billing cycle baseline updated to $readingVal"
-                dismissEditingBillingCycle()
-                onSuccess(updated)
+                withContext(Dispatchers.Main) {
+                    billCycleStatusMessage.value = "Billing cycle baseline updated to $readingVal"
+                    dismissEditingBillingCycle()
+                    onSuccess(updated)
+                }
             }.onFailure { error ->
-                editBillCycleError.value = error.message ?: "Failed to update billing cycle"
+                withContext(Dispatchers.Main) {
+                    editBillCycleError.value = error.message ?: "Failed to update billing cycle"
+                }
             }
         }
     }
@@ -476,9 +500,11 @@ class MeterViewModel(
         val cycle = cycleToDelete.value ?: return
         viewModelScope.launch(Dispatchers.IO) {
             repository.resetBillingCycle(cycle.meterId)
-            billCycleStatusMessage.value = "Billing cycle baseline reset to 0.0"
-            cycleToDelete.value = null
-            onSuccess()
+            withContext(Dispatchers.Main) {
+                billCycleStatusMessage.value = "Billing cycle baseline reset to 0.0"
+                cycleToDelete.value = null
+                onSuccess()
+            }
         }
     }
 
@@ -522,9 +548,11 @@ class MeterViewModel(
 
         viewModelScope.launch(Dispatchers.IO) {
             repository.insertMeter(name, initialReading)
-            meterManagementSuccess.value = "Meter '$name' added successfully"
-            dismissAddMeterDialog()
-            onSuccess()
+            withContext(Dispatchers.Main) {
+                meterManagementSuccess.value = "Meter '$name' added successfully"
+                dismissAddMeterDialog()
+                onSuccess()
+            }
         }
     }
 

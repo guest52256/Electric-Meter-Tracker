@@ -48,6 +48,8 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.AdManager
+import com.example.ads.findActivity
 import com.example.data.firebase.SyncState
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.Slate100
@@ -196,7 +198,13 @@ fun FirebaseCloudDialog(
                                 }
                             } else {
                                 Button(
-                                    onClick = { viewModel.signInWithGoogle(context) },
+                                    onClick = {
+                                        context.findActivity()?.let { activity ->
+                                            AdManager.showInterstitialAd(activity) {
+                                                viewModel.signInWithGoogle(context)
+                                            }
+                                        } ?: viewModel.signInWithGoogle(context)
+                                    },
                                     shape = RoundedCornerShape(8.dp),
                                     colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue),
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 10.dp, vertical = 2.dp),
@@ -382,7 +390,13 @@ fun FirebaseCloudDialog(
                     verticalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
                     Button(
-                        onClick = { viewModel.forcePushAllData(context) },
+                        onClick = {
+                            context.findActivity()?.let { activity ->
+                                AdManager.showInterstitialAd(activity) {
+                                    viewModel.forcePushAllData(context)
+                                }
+                            } ?: viewModel.forcePushAllData(context)
+                        },
                         enabled = !syncStatus.isSyncing,
                         shape = RoundedCornerShape(12.dp),
                         colors = ButtonDefaults.buttonColors(
@@ -418,7 +432,13 @@ fun FirebaseCloudDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.performCombinedSyncAndUpload(context) },
+                            onClick = {
+                                context.findActivity()?.let { activity ->
+                                    AdManager.showInterstitialAd(activity) {
+                                        viewModel.performCombinedSyncAndUpload(context)
+                                    }
+                                } ?: viewModel.performCombinedSyncAndUpload(context)
+                            },
                             enabled = !syncStatus.isSyncing,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier

@@ -56,6 +56,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.BannerAdView
 import com.example.ui.components.ExportBackupDialog
 import com.example.ui.theme.AlertAmber
 import com.example.ui.theme.AlertRed
@@ -409,6 +410,11 @@ fun ReportsScreen(
                     }
                 }
             }
+        }
+
+        // Anchored Banner Ad
+        item {
+            BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
         }
     }
 

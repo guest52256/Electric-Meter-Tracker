@@ -7,17 +7,27 @@ import android.os.Build
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.CloudDone
@@ -26,8 +36,10 @@ import androidx.compose.material.icons.filled.CloudSync
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material.icons.filled.SyncProblem
+import androidx.compose.material.icons.filled.Timer
 import androidx.compose.material3.Badge
 import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -36,6 +48,7 @@ import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
@@ -72,6 +85,7 @@ import com.example.ui.screens.MetersScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.SplashScreen
 import com.example.ui.theme.AlertRed
+import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.SuccessGreen
 import com.example.viewmodel.MeterViewModel
 
@@ -99,6 +113,8 @@ fun MainAppScreen(
     }
     val dashboardOverview by viewModel.dashboardOverview.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
+    val autoSyncCountdown by viewModel.autoSyncCountdown.collectAsStateWithLifecycle()
+    val autoSyncActivityName by viewModel.autoSyncActivityName.collectAsStateWithLifecycle()
 
     // Request Notification permission on Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -395,34 +411,101 @@ fun MainAppScreen(
             }
         }
     ) { innerPadding ->
-        Box(
+        Column(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            Crossfade(targetState = currentScreen, label = "ScreenTransition") { targetScreen ->
-                when (targetScreen) {
-                    Screen.DASHBOARD -> DashboardScreen(
-                        viewModel = viewModel,
-                        onNavigate = { screen -> currentScreen = screen }
-                    )
-                    Screen.ADD_READING -> AddReadingScreen(
-                        viewModel = viewModel,
-                        onNavigate = { screen -> currentScreen = screen }
-                    )
-                    Screen.HISTORY -> HistoryScreen(
-                        viewModel = viewModel
-                    )
-                    Screen.BILL_CYCLE -> BillCycleScreen(
-                        viewModel = viewModel,
-                        onNavigate = { screen -> currentScreen = screen }
-                    )
-                    Screen.METERS -> MetersScreen(
-                        viewModel = viewModel
-                    )
-                    Screen.REPORTS -> ReportsScreen(
-                        viewModel = viewModel
-                    )
+            // Automatic 10-second sync countdown indicator
+            AnimatedVisibility(
+                visible = autoSyncCountdown != null,
+                enter = fadeIn(),
+                exit = fadeOut()
+            ) {
+                Surface(
+                    color = MaterialTheme.colorScheme.primaryContainer,
+                    modifier = Modifier.fillMaxWidth(),
+                    shadowElevation = 2.dp
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        val count = autoSyncCountdown ?: 10
+                        Box(contentAlignment = Alignment.Center) {
+                            CircularProgressIndicator(
+                                progress = { (count.toFloat() / 10f).coerceIn(0f, 1f) },
+                                modifier = Modifier.size(20.dp),
+                                strokeWidth = 2.5.dp,
+                                color = MaterialTheme.colorScheme.primary,
+                                trackColor = MaterialTheme.colorScheme.primary.copy(alpha = 0.2f)
+                            )
+                            Text(
+                                text = "$count",
+                                style = MaterialTheme.typography.labelSmall.copy(
+                                    fontWeight = FontWeight.Bold,
+                                    fontSize = 10.sp
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Auto-syncing in ${count}s",
+                                style = MaterialTheme.typography.labelMedium.copy(fontWeight = FontWeight.Bold),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                            Text(
+                                text = if (autoSyncActivityName.isNotBlank()) "Uploading to Firebase: $autoSyncActivityName" else "Uploading & updating records in Firebase...",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.8f),
+                                maxLines = 1
+                            )
+                        }
+
+                        Icon(
+                            imageVector = Icons.Default.CloudSync,
+                            contentDescription = "Syncing",
+                            tint = MaterialTheme.colorScheme.primary,
+                            modifier = Modifier.size(18.dp)
+                        )
+                    }
+                }
+            }
+
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .weight(1f)
+            ) {
+                Crossfade(targetState = currentScreen, label = "ScreenTransition") { targetScreen ->
+                    when (targetScreen) {
+                        Screen.DASHBOARD -> DashboardScreen(
+                            viewModel = viewModel,
+                            onNavigate = { screen -> currentScreen = screen }
+                        )
+                        Screen.ADD_READING -> AddReadingScreen(
+                            viewModel = viewModel,
+                            onNavigate = { screen -> currentScreen = screen }
+                        )
+                        Screen.HISTORY -> HistoryScreen(
+                            viewModel = viewModel
+                        )
+                        Screen.BILL_CYCLE -> BillCycleScreen(
+                            viewModel = viewModel,
+                            onNavigate = { screen -> currentScreen = screen }
+                        )
+                        Screen.METERS -> MetersScreen(
+                            viewModel = viewModel
+                        )
+                        Screen.REPORTS -> ReportsScreen(
+                            viewModel = viewModel
+                        )
+                    }
                 }
             }
         }

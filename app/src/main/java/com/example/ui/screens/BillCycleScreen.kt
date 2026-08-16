@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -52,12 +53,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.AdManager
+import com.example.ads.BannerAdView
+import com.example.ads.findActivity
 import com.example.ui.components.DeleteConfirmDialog
 import com.example.ui.components.EditBillCycleDialog
 import com.example.ui.navigation.Screen
@@ -83,6 +88,7 @@ fun BillCycleScreen(
     onNavigate: (Screen) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val activeMeters by viewModel.activeMeters.collectAsStateWithLifecycle()
     val allMeters by viewModel.allMeters.collectAsStateWithLifecycle()
     val billingCycles by viewModel.billingCycles.collectAsStateWithLifecycle()
@@ -456,7 +462,10 @@ fun BillCycleScreen(
                     Button(
                         onClick = {
                             viewModel.updateBillingCycle {
-                                // Cycle updated
+                                // Cycle updated - show Interstitial Ad
+                                context.findActivity()?.let { activity ->
+                                    AdManager.showInterstitialAd(activity)
+                                }
                             }
                         },
                         modifier = Modifier
@@ -609,6 +618,9 @@ fun BillCycleScreen(
                 }
             }
         }
+
+        Spacer(modifier = Modifier.height(8.dp))
+        BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
     }
 
     // Direct Edit Billing Cycle Dialog

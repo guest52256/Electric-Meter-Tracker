@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -51,12 +52,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.AdManager
+import com.example.ads.BannerAdView
+import com.example.ads.findActivity
 import com.example.model.Meter
 import com.example.ui.components.DeleteConfirmDialog
 import com.example.ui.components.EditMeterDialog
@@ -79,6 +84,7 @@ fun MetersScreen(
     viewModel: MeterViewModel,
     modifier: Modifier = Modifier
 ) {
+    val context = LocalContext.current
     val allMeters by viewModel.allMeters.collectAsStateWithLifecycle()
     val billingCycles by viewModel.billingCycles.collectAsStateWithLifecycle()
     val allReadings by viewModel.allReadings.collectAsStateWithLifecycle()
@@ -267,6 +273,10 @@ fun MetersScreen(
                     )
                 }
             }
+            
+            item {
+                BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+            }
         }
 
         // FAB to add meter
@@ -366,7 +376,15 @@ fun MetersScreen(
                 Button(
                     onClick = {
                         viewModel.saveNewMeter {
-                            // Meter saved
+                            // On successful meter save, show rewarded video ad
+                            context.findActivity()?.let { activity ->
+                                AdManager.showRewardedAd(
+                                    activity = activity,
+                                    ignoreExemption = false,
+                                    onUserEarnedReward = { _, _ -> },
+                                    onAdClosed = { }
+                                )
+                            }
                         }
                     },
                     shape = RoundedCornerShape(10.dp),

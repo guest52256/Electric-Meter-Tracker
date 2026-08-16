@@ -65,6 +65,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.BannerAdView
 import com.example.model.DailyReading
 import com.example.ui.components.EditReadingDialog
 import com.example.ui.components.ExportBackupDialog
@@ -272,43 +273,47 @@ fun HistoryScreen(
         Spacer(modifier = Modifier.height(10.dp))
 
         // Readings List
-        if (filteredReadings.isEmpty()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Default.FilterList,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.outlineVariant,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text(
-                        text = "No readings match the filter",
-                        style = MaterialTheme.typography.titleMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
+        Box(modifier = Modifier.weight(1f)) {
+            if (filteredReadings.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Default.FilterList,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.outlineVariant,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text(
+                            text = "No readings match the filter",
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
                 }
-            }
-        } else {
-            LazyColumn(
-                modifier = Modifier.fillMaxSize(),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 88.dp),
-                verticalArrangement = Arrangement.spacedBy(10.dp)
-            ) {
-                items(filteredReadings, key = { "history_reading_${it.id}_${it.meterId}_${it.timestamp}" }) { reading ->
-                    HistoryReadingCard(
-                        reading = reading,
-                        onEditClick = { viewModel.startEditingReading(reading) },
-                        onDeleteClick = { readingToDelete = reading }
-                    )
+            } else {
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 6.dp, bottom = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    items(filteredReadings, key = { "history_reading_${it.id}_${it.meterId}_${it.timestamp}" }) { reading ->
+                        HistoryReadingCard(
+                            reading = reading,
+                            onEditClick = { viewModel.startEditingReading(reading) },
+                            onDeleteClick = { readingToDelete = reading }
+                        )
+                    }
                 }
             }
         }
+        
+        BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
     }
 
     // Edit Reading Dialog

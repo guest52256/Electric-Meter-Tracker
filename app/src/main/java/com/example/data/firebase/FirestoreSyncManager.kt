@@ -3,6 +3,7 @@ package com.example.data.firebase
 import android.content.Context
 import android.content.SharedPreferences
 import android.util.Log
+import com.example.data.AppSettingsPreferences
 import com.example.data.BillingCycleDao
 import com.example.data.DailyReadingDao
 import com.example.data.MeterDao
@@ -78,6 +79,56 @@ class FirestoreSyncManager(
     val networkMonitor = NetworkMonitor(context, scope)
     val authManager: FirebaseAuthManager = FirebaseAuthManager(context)
     val restApi: FirestoreRestApi = FirestoreRestApi()
+    val appSettingsPreferences = AppSettingsPreferences(context)
+
+    fun updateAndSyncUnitThreshold(threshold: Double) {
+        appSettingsPreferences.setUnitThreshold(threshold)
+        scope.launch {
+            try {
+                val db = firestore
+                val userId = authManager.getUserId()
+                val isGoogle = authManager.isUserSignedInWithGoogle()
+                val userType = if (isGoogle) "google" else "guest"
+                val profilePath = if (isGoogle && userId != null) "userProfiles/$userId" else "guestProfiles/$deviceId"
+                val settingsPath = if (isGoogle && userId != null) "users/$userId/settings/general" else "guests/$deviceId/settings/general"
+
+                val data = hashMapOf<String, Any>(
+                    "unitThreshold" to threshold,
+                    "updatedAt" to System.currentTimeMillis(),
+                    "deviceId" to deviceId,
+                    "userType" to userType
+                )
+
+                db?.document(profilePath)?.set(data, SetOptions.merge())
+                db?.document(settingsPath)?.set(data, SetOptions.merge())
+                Log.d(tag, "Unit threshold ($threshold) synced to Firebase at $profilePath and $settingsPath")
+            } catch (e: Exception) {
+                Log.w(tag, "Failed to sync unit threshold to Firestore: ${e.message}")
+            }
+        }
+    }
+
+    private fun fetchRemoteSettings() {
+        scope.launch {
+            try {
+                val db = firestore ?: return@launch
+                val userId = authManager.getUserId()
+                val isGoogle = authManager.isUserSignedInWithGoogle()
+                val profilePath = if (isGoogle && userId != null) "userProfiles/$userId" else "guestProfiles/$deviceId"
+                db.document(profilePath).get().addOnSuccessListener { snapshot ->
+                    if (snapshot != null && snapshot.exists()) {
+                        val remoteThreshold = snapshot.getDouble("unitThreshold")
+                        if (remoteThreshold != null && remoteThreshold >= 1.0) {
+                            appSettingsPreferences.setFromRemoteSync(remoteThreshold)
+                            Log.d(tag, "Loaded remote unitThreshold ($remoteThreshold) from $profilePath")
+                        }
+                    }
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "Error fetching remote settings: ${e.message}")
+            }
+        }
+    }
 
     private var meterDao: MeterDao? = null
     private var billingCycleDao: BillingCycleDao? = null
@@ -89,6 +140,61 @@ class FirestoreSyncManager(
     private var readingsListener: ListenerRegistration? = null
 
     private var periodicSyncJob: Job? = null
+    private var activityAutoSyncJob: Job? = null
+    private val _autoSyncCountdown = MutableStateFlow<Int?>(null)
+    val autoSyncCountdown: StateFlow<Int?> = _autoSyncCountdown.asStateFlow()
+    private val _autoSyncActivityName = MutableStateFlow<String>("")
+    val autoSyncActivityName: StateFlow<String> = _autoSyncActivityName.asStateFlow()
+
+    /**
+     * Triggers a 10-second automatic timer whenever any user activity occurs:
+     * - Creating a new record (meter, reading, cycle)
+     * - Updating an existing record
+     * - Reading / recording data
+     *
+     * After 10 seconds of timer activation, automatically uploads, updates, or inserts
+     * all records to Firebase Firestore and saves them cleanly.
+     */
+    fun triggerActivityAutoSync(activityDescription: String = "Record Activity") {
+        _autoSyncActivityName.value = activityDescription
+        activityAutoSyncJob?.cancel()
+        activityAutoSyncJob = scope.launch {
+            Log.d(tag, "10-second auto-sync timer triggered for activity: $activityDescription")
+            for (sec in 10 downTo 1) {
+                _autoSyncCountdown.value = sec
+                _syncStatus.value = _syncStatus.value.copy(
+                    syncMessage = "Auto-saving to Firebase in ${sec}s ($activityDescription)..."
+                )
+                delay(1000L)
+            }
+            _autoSyncCountdown.value = 0
+            _syncStatus.value = _syncStatus.value.copy(
+                syncMessage = "Auto-uploading records to Firebase...",
+                state = SyncState.SYNCING,
+                isSyncing = true
+            )
+            
+            // Execute automatic upload & sync of all inserted/updated records
+            val result = performCombinedSyncAndUpload()
+            _autoSyncCountdown.value = null
+            if (result.isSuccess) {
+                val count = result.getOrNull() ?: 0
+                Log.d(tag, "10-second auto-sync finished successfully ($count items synced).")
+                _syncStatus.value = _syncStatus.value.copy(
+                    syncMessage = "Auto-synced: All records uploaded & saved to Firebase",
+                    lastSyncedAt = System.currentTimeMillis(),
+                    state = SyncState.SYNCED,
+                    isSyncing = false
+                )
+            } else {
+                Log.w(tag, "10-second auto-sync notice: ${result.exceptionOrNull()?.message}")
+                _syncStatus.value = _syncStatus.value.copy(
+                    isSyncing = false,
+                    state = if (networkMonitor.isOnline.value) SyncState.SYNCED else SyncState.OFFLINE
+                )
+            }
+        }
+    }
 
     val firestore: FirebaseFirestore? by lazy {
         try {
@@ -190,8 +296,9 @@ class FirestoreSyncManager(
         // 4. Start periodic background sync (every 45 seconds when active)
         startPeriodicSync()
 
-        // 5. Initial sync
+        // 5. Initial sync and settings fetch
         scope.launch {
+            fetchRemoteSettings()
             if (networkMonitor.isOnline.value) {
                 syncPendingQueue()
             }
@@ -929,6 +1036,8 @@ class FirestoreSyncManager(
             return@withContext Result.failure(IllegalStateException("Device is offline"))
         }
 
+        if (!authManager.isUserSignedInWithGoogle()) { return@withContext Result.failure(IllegalStateException("You must sign in with Google to sync data to the cloud.")) }
+
         val userId = authManager.getUserId() ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
 
         _syncStatus.value = _syncStatus.value.copy(
@@ -1081,6 +1190,10 @@ class FirestoreSyncManager(
         val bDao = billingCycleDao ?: return@withContext Result.failure(IllegalStateException("BillingCycleDao is null"))
         val dDao = dailyReadingDao ?: return@withContext Result.failure(IllegalStateException("DailyReadingDao is null"))
 
+        if (!authManager.isUserSignedInWithGoogle()) { return@withContext Result.failure(IllegalStateException("You must sign in with Google to sync data to the cloud.")) }
+
+        val userId = authManager.getUserId() ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
+
         _syncStatus.value = _syncStatus.value.copy(
             state = SyncState.SYNCING,
             isSyncing = true,
@@ -1152,6 +1265,8 @@ class FirestoreSyncManager(
         if (!networkMonitor.isOnline.value) {
             return@withContext Result.failure(IllegalStateException("Device is offline"))
         }
+
+        if (!authManager.isUserSignedInWithGoogle()) { return@withContext Result.failure(IllegalStateException("You must sign in with Google to sync data to the cloud.")) }
 
         val userId = authManager.getUserId() ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
 

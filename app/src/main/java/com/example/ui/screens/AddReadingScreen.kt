@@ -1,5 +1,6 @@
 package com.example.ui.screens
 
+import android.app.Activity
 import android.app.DatePickerDialog
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
@@ -64,6 +65,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.AdManager
+import com.example.ads.BannerAdView
+import com.example.ads.findActivity
 import com.example.ui.components.HighUsageAlertBanner
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.AlertAmber
@@ -624,7 +628,15 @@ fun AddReadingScreen(
                     Button(
                         onClick = {
                             viewModel.submitDailyReading {
-                                // On successful submission
+                                // On successful reading save, show rewarded video ad
+                                context.findActivity()?.let { activity ->
+                                    AdManager.showRewardedAd(
+                                        activity = activity,
+                                        ignoreExemption = false,
+                                        onUserEarnedReward = { _, _ -> },
+                                        onAdClosed = { }
+                                    )
+                                }
                             }
                         },
                         enabled = currentReadingInput.isNotBlank() && !isInputLowerThanBill,
@@ -654,7 +666,11 @@ fun AddReadingScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(12.dp))
+            BannerAdView(modifier = Modifier.padding(bottom = 80.dp))
         }
     }
 }
 }
+

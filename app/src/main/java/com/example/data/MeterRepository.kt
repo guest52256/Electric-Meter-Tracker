@@ -30,6 +30,11 @@ class MeterRepository(
     val allBillingCycles: Flow<List<MeterBillingCycle>> = billingCycleDao.getAllBillingCycles()
     val allReadings: Flow<List<DailyReading>> = dailyReadingDao.getAllReadings()
     val alertReadings: Flow<List<DailyReading>> = dailyReadingDao.getAlertReadings()
+    val unitThreshold: Flow<Double> = firestoreSyncManager.appSettingsPreferences.unitThreshold
+
+    fun updateUnitThreshold(threshold: Double) {
+        firestoreSyncManager.updateAndSyncUnitThreshold(threshold)
+    }
 
     init {
         // Initialize Firestore Sync Manager with DAOs
@@ -84,6 +89,8 @@ class MeterRepository(
         scope.launch {
             firestoreSyncManager.pushMeter(savedMeter)
             firestoreSyncManager.pushBillingCycle(cycle)
+            // Trigger 10-second automatic timer to upload & update all records to Firebase
+            firestoreSyncManager.triggerActivityAutoSync("New Meter '$name' created")
         }
 
         return meterId
@@ -98,6 +105,7 @@ class MeterRepository(
             meterDao.updateMeter(updated)
             scope.launch {
                 firestoreSyncManager.pushMeter(updated)
+                firestoreSyncManager.triggerActivityAutoSync("Meter status updated")
             }
         }
     }
@@ -121,6 +129,7 @@ class MeterRepository(
         meterDao.updateMeter(updated)
         scope.launch {
             firestoreSyncManager.pushMeter(updated)
+            firestoreSyncManager.triggerActivityAutoSync("Meter '$trimmedName' updated")
         }
         return Result.success(updated)
     }
@@ -138,6 +147,7 @@ class MeterRepository(
             scope.launch {
                 firestoreSyncManager.deleteMeter(meterId)
                 firestoreSyncManager.deleteBillingCycle(meterId)
+                firestoreSyncManager.triggerActivityAutoSync("Meter deleted")
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -158,6 +168,7 @@ class MeterRepository(
             meterDao.updateMeter(updated)
             scope.launch {
                 firestoreSyncManager.pushMeter(updated)
+                firestoreSyncManager.triggerActivityAutoSync("Meter renamed to '$newName'")
             }
         }
     }
@@ -195,6 +206,7 @@ class MeterRepository(
         billingCycleDao.insertOrUpdateBillingCycle(cycle)
         scope.launch {
             firestoreSyncManager.pushBillingCycle(cycle)
+            firestoreSyncManager.triggerActivityAutoSync("Billing cycle updated ($newPreviousBillReading)")
         }
         return Result.success(cycle)
     }
@@ -203,7 +215,9 @@ class MeterRepository(
         val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH)
         val now = System.currentTimeMillis()
         val formattedDate = dateFormat.format(Date(now))
-        return updateBillingCycleFull(meterId, 0.0, formattedDate)
+        val res = updateBillingCycleFull(meterId, 0.0, formattedDate)
+        firestoreSyncManager.triggerActivityAutoSync("Billing cycle reset")
+        return res
     }
 
     suspend fun deleteBillingCycle(meterId: Long): Result<Unit> {
@@ -211,6 +225,7 @@ class MeterRepository(
             billingCycleDao.deleteBillingCycleForMeter(meterId)
             scope.launch {
                 firestoreSyncManager.deleteBillingCycle(meterId)
+                firestoreSyncManager.triggerActivityAutoSync("Billing cycle deleted")
             }
             Result.success(Unit)
         } catch (e: Exception) {
@@ -246,7 +261,8 @@ class MeterRepository(
         }
 
         val units = currentReading - previousBill
-        val isAlert = units >= 100.0
+        val currentThreshold = firestoreSyncManager.appSettingsPreferences.unitThreshold.value
+        val isAlert = units >= currentThreshold
         val now = System.currentTimeMillis()
 
         // Check if there's an existing reading for this meter & date to update/merge cleanly
@@ -277,6 +293,7 @@ class MeterRepository(
         // Asynchronously persist to Firebase Firestore
         scope.launch {
             firestoreSyncManager.pushReading(savedReading)
+            firestoreSyncManager.triggerActivityAutoSync("New Reading for '${savedReading.meterName}' saved")
         }
 
         return Result.success(savedReading)
@@ -304,7 +321,8 @@ class MeterRepository(
         }
 
         val units = currentReading - previousBill
-        val isAlert = units >= 100.0
+        val currentThreshold = firestoreSyncManager.appSettingsPreferences.unitThreshold.value
+        val isAlert = units >= currentThreshold
         val now = System.currentTimeMillis()
 
         val updatedReading = existing.copy(
@@ -323,6 +341,7 @@ class MeterRepository(
         dailyReadingDao.updateReading(updatedReading)
         scope.launch {
             firestoreSyncManager.pushReading(updatedReading)
+            firestoreSyncManager.triggerActivityAutoSync("Daily Reading updated")
         }
 
         return Result.success(updatedReading)
@@ -332,6 +351,7 @@ class MeterRepository(
         dailyReadingDao.deleteReading(reading)
         scope.launch {
             firestoreSyncManager.deleteReading(reading)
+            firestoreSyncManager.triggerActivityAutoSync("Daily Reading deleted")
         }
     }
 
@@ -341,6 +361,9 @@ class MeterRepository(
             deleteReading(reading)
         } else {
             dailyReadingDao.deleteReadingById(id)
+            scope.launch {
+                firestoreSyncManager.triggerActivityAutoSync("Daily Reading deleted")
+            }
         }
     }
 

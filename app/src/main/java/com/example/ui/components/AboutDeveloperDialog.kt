@@ -1,5 +1,6 @@
 package com.example.ui.components
 
+import android.app.Activity
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -23,6 +24,7 @@ import androidx.compose.material.icons.filled.Call
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Email
 import androidx.compose.material.icons.filled.LocationOn
+import androidx.compose.material.icons.filled.OndemandVideo
 import androidx.compose.material.icons.filled.Psychology
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -31,6 +33,7 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -49,6 +52,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
+import com.example.ads.AdManager
 import com.example.ui.theme.ElectricBlue
 
 @Composable
@@ -292,6 +296,45 @@ fun AboutDeveloperDialog(
                 }
 
                 Spacer(modifier = Modifier.height(18.dp))
+
+                // Optional Rewarded Video Ad to support app
+                OutlinedButton(
+                    onClick = {
+                        (context as? Activity)?.let { activity ->
+                            AdManager.showRewardedAd(
+                                activity = activity,
+                                onUserEarnedReward = { amount, type ->
+                                    Toast.makeText(context, "Thank you for supporting the developer! ❤️", Toast.LENGTH_LONG).show()
+                                },
+                                onAdClosed = { earned ->
+                                    if (!earned) {
+                                        Toast.makeText(context, "Ad completed. Thank you!", Toast.LENGTH_SHORT).show()
+                                    }
+                                }
+                            )
+                        }
+                    },
+                    shape = RoundedCornerShape(10.dp),
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(44.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Default.OndemandVideo,
+                        contentDescription = null,
+                        tint = Color(0xFF38BDF8),
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = "Support App (Watch Short Ad)",
+                        color = Color(0xFF38BDF8),
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.SemiBold
+                    )
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
 
                 Button(
                     onClick = onDismiss,
