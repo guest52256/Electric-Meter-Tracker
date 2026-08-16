@@ -88,6 +88,7 @@ fun DashboardScreen(
 ) {
     val dashboardOverview by viewModel.dashboardOverview.collectAsStateWithLifecycle()
     val editingReading by viewModel.editingReading.collectAsStateWithLifecycle()
+    val unitThreshold by viewModel.unitThreshold.collectAsStateWithLifecycle()
     val context = LocalContext.current
     var isRefreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -111,7 +112,7 @@ fun DashboardScreen(
                 contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 16.dp, bottom = 88.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-            // Firebase Cloud Persistence Banner
+            // Cloud Persistence Banner
             item {
                 FirebaseSyncBanner(
                     viewModel = viewModel,
@@ -124,19 +125,21 @@ fun DashboardScreen(
                 HeroSummaryCard(
                     totalUnits = dashboardOverview.totalCurrentUnits,
                     activeAlerts = dashboardOverview.totalAlertsCount,
-                    activeMetersCount = dashboardOverview.totalActiveMeters
+                    activeMetersCount = dashboardOverview.totalActiveMeters,
+                    unitThreshold = unitThreshold
                 )
             }
 
-            // Overall Alert Banner if any meter >= 100
+            // Overall Alert Banner
             if (dashboardOverview.totalAlertsCount > 0) {
                 item {
                     val alertMeters = dashboardOverview.meterCards.filter { it.isAlert }
                     val alertNames = alertMeters.joinToString(", ") { it.meter.name }
-                    val maxUnits = alertMeters.maxOfOrNull { it.unitsSinceBill } ?: 100.0
+                    val maxUnits = alertMeters.maxOfOrNull { it.unitsSinceBill } ?: unitThreshold
 
                     HighUsageAlertBanner(
                         units = maxUnits,
+                        unitThreshold = unitThreshold,
                         meterName = alertNames,
                         modifier = Modifier.padding(vertical = 4.dp)
                     )
@@ -220,7 +223,7 @@ fun DashboardScreen(
                             )
 
                             Text(
-                                text = "Add your electricity meters to start recording daily readings and automatic 100+ unit alert tracking.",
+                                text = "Add your electricity meters to start recording daily readings and automatic unit alert tracking.",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = androidx.compose.ui.text.style.TextAlign.Center
@@ -346,6 +349,7 @@ fun HeroSummaryCard(
     totalUnits: Double,
     activeAlerts: Int,
     activeMetersCount: Int,
+    unitThreshold: Double,
     modifier: Modifier = Modifier
 ) {
     val totalUnitsDisplay = if (totalUnits % 1.0 == 0.0) totalUnits.toInt().toString() else "%.1f".format(totalUnits)
@@ -518,7 +522,7 @@ fun HeroSummaryCard(
                             )
                             Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = "100 Units / Cycle",
+                                text = "${unitThreshold.toInt()} Units / Cycle",
                                 style = MaterialTheme.typography.titleSmall.copy(
                                     fontWeight = FontWeight.Bold,
                                     color = Color(0xFF67E8F9)

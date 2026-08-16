@@ -272,7 +272,7 @@ fun GoogleSignInScreen(
                                 Spacer(modifier = Modifier.width(12.dp))
                                 Column {
                                     Text(
-                                        text = "100-Unit Threshold Alerts",
+                                        text = "Custom Unit Threshold Alerts",
                                         style = MaterialTheme.typography.titleSmall.copy(fontWeight = FontWeight.Bold),
                                         color = Color.White
                                     )
@@ -442,7 +442,7 @@ fun GoogleSignInScreen(
                 modifier = Modifier.fillMaxWidth()
             ) {
                 Text(
-                    text = "Project: kinza-digital-hub",
+                    text = "Powered by Google Identity",
                     style = MaterialTheme.typography.labelSmall.copy(
                         fontSize = 11.sp
                     ),

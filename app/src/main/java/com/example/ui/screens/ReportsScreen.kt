@@ -81,6 +81,7 @@ fun ReportsScreen(
     val allMeters by viewModel.allMeters.collectAsStateWithLifecycle()
     val allReadings by viewModel.allReadings.collectAsStateWithLifecycle()
     val dashboardOverview by viewModel.dashboardOverview.collectAsStateWithLifecycle()
+    val unitThreshold by viewModel.unitThreshold.collectAsStateWithLifecycle()
 
     var selectedMeterId by remember { mutableStateOf<Long?>(null) } // null = All
     var showExportBackupDialog by remember { mutableStateOf(false) }
@@ -269,7 +270,7 @@ fun ReportsScreen(
                             text = "${totalUnits.toInt()} Units",
                             style = MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.Black,
-                                color = if (totalUnits >= 100) AlertRed else ElectricBlue
+                                color = if (totalUnits >= unitThreshold) AlertRed else ElectricBlue
                             )
                         )
                     }
@@ -302,7 +303,7 @@ fun ReportsScreen(
                         }
                         Spacer(modifier = Modifier.height(8.dp))
                         Text(
-                            text = if (activeAlerts > 0) "$activeAlerts Exceeded 100" else "Normal",
+                            text = if (activeAlerts > 0) "$activeAlerts Exceeded ${unitThreshold.toInt()}" else "Normal",
                             style = MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.Bold,
                                 color = if (activeAlerts > 0) AlertRed else SuccessGreen
@@ -336,7 +337,10 @@ fun ReportsScreen(
                     Spacer(modifier = Modifier.height(16.dp))
 
                     if (recentDaysReadings.isNotEmpty()) {
-                        ConsumptionBarChart(readings = recentDaysReadings)
+                        ConsumptionBarChart(
+                            readings = recentDaysReadings,
+                            unitThreshold = unitThreshold
+                        )
                     } else {
                         Box(
                             modifier = Modifier
@@ -403,7 +407,7 @@ fun ReportsScreen(
                             )
                         )
                         Text(
-                            text = if (card.isAlert) "🔴 Alert (>= 100)" else "🟢 Normal",
+                            text = if (card.isAlert) "🔴 Alert (>= ${unitThreshold.toInt()})" else "🟢 Normal",
                             style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                             color = if (card.isAlert) AlertRed else SuccessGreen
                         )
@@ -429,9 +433,10 @@ fun ReportsScreen(
 @Composable
 fun ConsumptionBarChart(
     readings: List<com.example.model.DailyReading>,
+    unitThreshold: Double,
     modifier: Modifier = Modifier
 ) {
-    val maxUnits = (readings.maxOfOrNull { it.unitsSinceBill } ?: 100.0).coerceAtLeast(120.0)
+    val maxUnits = (readings.maxOfOrNull { it.unitsSinceBill } ?: unitThreshold).coerceAtLeast(unitThreshold * 1.2)
 
     Column(modifier = modifier.fillMaxWidth()) {
         Canvas(
@@ -445,8 +450,8 @@ fun ConsumptionBarChart(
             val availableWidth = size.width - totalSpacing
             val barWidth = (availableWidth / barCount).coerceAtMost(48.dp.toPx())
 
-            // 100 units threshold line
-            val thresholdY = size.height * (1f - (100.0 / maxUnits).toFloat())
+            // threshold units threshold line
+            val thresholdY = size.height * (1f - (unitThreshold / maxUnits).toFloat())
             drawLine(
                 color = AlertRed.copy(alpha = 0.6f),
                 start = Offset(0f, thresholdY),
@@ -459,7 +464,7 @@ fun ConsumptionBarChart(
                 val left = barSpacing + index * (barWidth + barSpacing)
                 val top = size.height - barHeight
 
-                val isExceeded = reading.unitsSinceBill >= 100.0
+                val isExceeded = reading.unitsSinceBill >= unitThreshold
 
                 drawRoundRect(
                     color = if (isExceeded) AlertRed else ElectricBlue,
@@ -501,7 +506,7 @@ fun ConsumptionBarChart(
             )
             Spacer(modifier = Modifier.width(6.dp))
             Text(
-                text = "Red Dashed Line: 100 Units Alert Threshold",
+                text = "Red Dashed Line: ${unitThreshold.toInt()} Units Alert Threshold",
                 style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                 color = AlertRed
             )

@@ -76,11 +76,12 @@ fun EditReadingDialog(
     val dateInput by viewModel.editReadingDate.collectAsStateWithLifecycle()
     val notesInput by viewModel.editReadingNotes.collectAsStateWithLifecycle()
     val errorMsg by viewModel.editReadingError.collectAsStateWithLifecycle()
+    val unitThreshold by viewModel.unitThreshold.collectAsStateWithLifecycle()
 
     val currentNum = currentInput.toDoubleOrNull()
     val previousBill = reading.previousBillReading
     val liveUnits = if (currentNum != null) (currentNum - previousBill).coerceAtLeast(0.0) else 0.0
-    val liveAlert = liveUnits >= 100.0
+    val liveAlert = liveUnits >= unitThreshold
 
     AlertDialog(
         onDismissRequest = onDismiss,

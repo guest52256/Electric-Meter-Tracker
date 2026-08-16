@@ -104,7 +104,7 @@ fun FirebaseCloudDialog(
                         ) {
                             Icon(
                                 imageVector = if (syncStatus.lastSyncedAt != null) Icons.Default.CloudDone else Icons.Default.CloudSync,
-                                contentDescription = "Firebase Cloud Firestore",
+                                contentDescription = "Cloud Sync",
                                 tint = if (syncStatus.lastSyncedAt != null) SuccessGreen else ElectricBlue,
                                 modifier = Modifier.size(24.dp)
                             )
@@ -112,7 +112,7 @@ fun FirebaseCloudDialog(
                         Spacer(modifier = Modifier.width(12.dp))
                         Column {
                             Text(
-                                text = "Firebase Cloud Firestore",
+                                text = "Secure Data Sync",
                                 style = MaterialTheme.typography.titleMedium.copy(
                                     fontWeight = FontWeight.Bold,
                                     fontSize = 17.sp
@@ -120,7 +120,7 @@ fun FirebaseCloudDialog(
                                 color = Slate900
                             )
                             Text(
-                                text = "kinza-digital-hub",
+                                text = "Encrypted Connection",
                                 style = MaterialTheme.typography.bodySmall.copy(fontWeight = FontWeight.Medium),
                                 color = ElectricBlue
                             )
@@ -189,7 +189,13 @@ fun FirebaseCloudDialog(
 
                             if (currentUser != null) {
                                 OutlinedButton(
-                                    onClick = { viewModel.signOut(context) },
+                                    onClick = {
+                                        context.findActivity()?.let { activity ->
+                                            AdManager.showInterstitialAd(activity) {
+                                                viewModel.signOut(context)
+                                            }
+                                        } ?: viewModel.signOut(context)
+                                    },
                                     shape = RoundedCornerShape(8.dp),
                                     contentPadding = androidx.compose.foundation.layout.PaddingValues(horizontal = 8.dp, vertical = 2.dp),
                                     modifier = Modifier.height(28.dp)
@@ -324,17 +330,17 @@ fun FirebaseCloudDialog(
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     Text(
-                        text = "Cloud Collections Synced:",
+                        text = "Cloud Data Synced:",
                         style = MaterialTheme.typography.labelSmall.copy(
                             fontWeight = FontWeight.Bold,
                             color = Slate800
                         )
                     )
                     listOf(
-                        "meters" to "Meter names & active states",
-                        "billingCycles" to "Starting bill readings per meter",
-                        "dailyReadings" to "Daily entries & 100-unit alert status",
-                        "appSettings" to "Global alert threshold (100 units)"
+                        "Meters" to "Meter names & active states",
+                        "Billing" to "Starting bill readings per meter",
+                        "Readings" to "Daily entries & limit alert status",
+                        "Settings" to "Global alert threshold"
                     ).forEach { (coll, desc) ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
@@ -423,7 +429,7 @@ fun FirebaseCloudDialog(
                                 modifier = Modifier.size(18.dp)
                             )
                             Spacer(modifier = Modifier.width(8.dp))
-                            Text("Push All Records to Firestore")
+                            Text("Push All Records to Cloud")
                         }
                     }
 

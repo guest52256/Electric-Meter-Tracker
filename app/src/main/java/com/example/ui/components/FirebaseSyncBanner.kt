@@ -145,7 +145,7 @@ fun FirebaseSyncBanner(
                 Column {
                     val titleText = when (syncStatus.state) {
                         SyncState.SYNCED -> "🟢 All data synced"
-                        SyncState.SYNCING -> "🟠 Syncing with Firestore..."
+                        SyncState.SYNCING -> "🟠 Syncing..."
                         SyncState.OFFLINE -> "🔴 Offline — Data saved locally"
                         SyncState.ERROR -> "⚠️ Sync issue detected"
                     }
@@ -162,10 +162,10 @@ fun FirebaseSyncBanner(
                     val timeFormat = SimpleDateFormat("hh:mm a", Locale.ENGLISH)
                     val subtitleText = when {
                         !syncStatus.isOnline -> "Offline mode active. Readings are safely saved to device Room database."
-                        syncStatus.state == SyncState.SYNCING -> "Uploading and merging records with Firebase Firestore..."
+                        syncStatus.state == SyncState.SYNCING -> "Uploading and merging records securely..."
                         syncStatus.pendingCount > 0 -> "${syncStatus.pendingCount} record(s) queued for synchronization."
-                        syncStatus.lastSyncedAt != null -> "Synced at ${timeFormat.format(Date(syncStatus.lastSyncedAt!!))} (Project: kinza-digital-hub)"
-                        else -> "Firebase Cloud Firestore connected"
+                        syncStatus.lastSyncedAt != null -> "Synced at ${timeFormat.format(Date(syncStatus.lastSyncedAt!!))}"
+                        else -> "Secure Cloud connected"
                     }
 
                     Text(

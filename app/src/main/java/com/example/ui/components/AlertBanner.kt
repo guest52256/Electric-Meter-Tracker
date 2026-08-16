@@ -39,10 +39,11 @@ import com.example.ui.theme.AlertRedText
 @Composable
 fun HighUsageAlertBanner(
     units: Double,
+    unitThreshold: Double,
     meterName: String? = null,
     modifier: Modifier = Modifier
 ) {
-    val isAlert = units >= 100.0
+    val isAlert = units >= unitThreshold
     val unitsDisplay = if (units % 1.0 == 0.0) units.toInt().toString() else "%.1f".format(units)
 
     AnimatedVisibility(
@@ -104,7 +105,7 @@ fun HighUsageAlertBanner(
                         )
                     }
                     Text(
-                        text = "حالیہ بل سائیکل میں 100 یا اس سے زیادہ یونٹس استعمال ہو چکے ہیں",
+                        text = "حالیہ بل سائیکل میں یونٹس کی حد استعمال ہو چکے ہیں",
                         style = MaterialTheme.typography.bodySmall,
                         color = AlertRedText.copy(alpha = 0.8f)
                     )

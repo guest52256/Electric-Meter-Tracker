@@ -214,7 +214,7 @@ fun BillCycleScreen(
                     )
                     Spacer(modifier = Modifier.height(4.dp))
                     Text(
-                        text = "When your new monthly electricity bill arrives, enter the bill's reading here. Future daily readings will automatically calculate units from this new baseline, resetting the 100+ alert cycle to zero.",
+                        text = "When your new monthly electricity bill arrives, enter the bill's reading here. Future daily readings will automatically calculate units from this new baseline, resetting the alert cycle to zero.",
                         style = MaterialTheme.typography.bodySmall,
                         color = AlertAmberText.copy(alpha = 0.9f)
                     )

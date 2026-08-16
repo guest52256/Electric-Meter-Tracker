@@ -38,6 +38,7 @@ data class MeterDashboardCardState(
     val currentReading: Double,
     val unitsSinceBill: Double,
     val isAlert: Boolean,
+    val alertThreshold: Double,
     val lastReadingDate: String
 )
 
@@ -277,6 +278,7 @@ class MeterViewModel(
                 currentReading = currentR,
                 unitsSinceBill = units,
                 isAlert = isAlert,
+                alertThreshold = threshold,
                 lastReadingDate = dateStr
             )
         }

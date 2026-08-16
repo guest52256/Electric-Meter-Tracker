@@ -65,6 +65,8 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.ads.AdManager
+import com.example.ads.findActivity
 import com.example.ads.BannerAdView
 import com.example.model.DailyReading
 import com.example.ui.components.EditReadingDialog
@@ -146,7 +148,13 @@ fun HistoryScreen(
             Row(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
                 // Main Export CSV Button (All Data)
                 IconButton(
-                    onClick = { showExportBackupDialog = true },
+                    onClick = {
+                        context.findActivity()?.let { activity ->
+                            AdManager.showInterstitialAd(activity) {
+                                showExportBackupDialog = true
+                            }
+                        } ?: run { showExportBackupDialog = true }
+                    },
                     modifier = Modifier.testTag("btn_export_backup_csv")
                 ) {
                     Icon(
@@ -158,11 +166,21 @@ fun HistoryScreen(
 
                 IconButton(
                     onClick = {
-                        val csv = viewModel.generateCsvExport(filteredReadings)
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
-                        val clip = ClipData.newPlainText("Meter Readings CSV", csv)
-                        clipboard?.setPrimaryClip(clip)
-                        Toast.makeText(context, "CSV copied for Google Sheets!", Toast.LENGTH_SHORT).show()
+                        context.findActivity()?.let { activity ->
+                            AdManager.showInterstitialAd(activity) {
+                                val csv = viewModel.generateCsvExport(filteredReadings)
+                                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                val clip = ClipData.newPlainText("Meter Readings CSV", csv)
+                                clipboard?.setPrimaryClip(clip)
+                                Toast.makeText(context, "CSV copied for Google Sheets!", Toast.LENGTH_SHORT).show()
+                            }
+                        } ?: run {
+                            val csv = viewModel.generateCsvExport(filteredReadings)
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                            val clip = ClipData.newPlainText("Meter Readings CSV", csv)
+                            clipboard?.setPrimaryClip(clip)
+                            Toast.makeText(context, "CSV copied for Google Sheets!", Toast.LENGTH_SHORT).show()
+                        }
                     },
                     modifier = Modifier.testTag("btn_copy_csv")
                 ) {
@@ -175,14 +193,27 @@ fun HistoryScreen(
 
                 IconButton(
                     onClick = {
-                        val summary = viewModel.generateTextSummary(filteredReadings)
-                        val sendIntent: Intent = Intent().apply {
-                            action = Intent.ACTION_SEND
-                            putExtra(Intent.EXTRA_TEXT, summary)
-                            type = "text/plain"
+                        context.findActivity()?.let { activity ->
+                            AdManager.showInterstitialAd(activity) {
+                                val summary = viewModel.generateTextSummary(filteredReadings)
+                                val sendIntent: Intent = Intent().apply {
+                                    action = Intent.ACTION_SEND
+                                    putExtra(Intent.EXTRA_TEXT, summary)
+                                    type = "text/plain"
+                                }
+                                val shareIntent = Intent.createChooser(sendIntent, "Share Meter Readings Report")
+                                context.startActivity(shareIntent)
+                            }
+                        } ?: run {
+                            val summary = viewModel.generateTextSummary(filteredReadings)
+                            val sendIntent: Intent = Intent().apply {
+                                action = Intent.ACTION_SEND
+                                putExtra(Intent.EXTRA_TEXT, summary)
+                                type = "text/plain"
+                            }
+                            val shareIntent = Intent.createChooser(sendIntent, "Share Meter Readings Report")
+                            context.startActivity(shareIntent)
                         }
-                        val shareIntent = Intent.createChooser(sendIntent, "Share Meter Readings Report")
-                        context.startActivity(shareIntent)
                     },
                     modifier = Modifier.testTag("btn_share_summary")
                 ) {
@@ -261,7 +292,7 @@ fun HistoryScreen(
                 FilterChip(
                     selected = alertOnlyFilter,
                     onClick = { viewModel.toggleHistoryAlertFilter() },
-                    label = { Text("🔴 100+ Alerts Only") },
+                    label = { Text("🔴 Alerts Only") },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = AlertRed,
                         selectedLabelColor = Color.White

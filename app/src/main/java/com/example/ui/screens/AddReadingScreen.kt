@@ -102,6 +102,7 @@ fun AddReadingScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
+    val unitThreshold by viewModel.unitThreshold.collectAsStateWithLifecycle()
     val activeMeters by viewModel.activeMeters.collectAsStateWithLifecycle()
     val billingCycles by viewModel.billingCycles.collectAsStateWithLifecycle()
 
@@ -130,7 +131,7 @@ fun AddReadingScreen(
     } else null
 
     val isInputLowerThanBill = currentReadingVal != null && currentReadingVal < previousBillReading
-    val isAlert = calculatedUnits != null && calculatedUnits >= 100.0
+    val isAlert = calculatedUnits != null && calculatedUnits >= unitThreshold
 
     var dropdownExpanded by remember { mutableStateOf(false) }
 
@@ -585,7 +586,7 @@ fun AddReadingScreen(
                                         color = if (isAlert) AlertRedText else Slate600
                                     )
                                     Text(
-                                        text = if (isAlert) "🔴 HIGH ALERT (>= 100)" else "🟢 NORMAL USAGE",
+                                        text = if (isAlert) "🔴 HIGH ALERT (>= ${unitThreshold.toInt()})" else "🟢 NORMAL USAGE",
                                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Black),
                                         color = if (isAlert) AlertRed else SuccessGreenText
                                     )
@@ -602,10 +603,11 @@ fun AddReadingScreen(
                         }
                     }
 
-                    // 100+ High Usage Alert Banner Preview
+                    // High Usage Alert Banner Preview
                     if (isAlert && calculatedUnits != null) {
                         HighUsageAlertBanner(
                             units = calculatedUnits,
+                            unitThreshold = unitThreshold,
                             meterName = selectedMeter?.name
                         )
                     }

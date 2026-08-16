@@ -419,7 +419,7 @@ fun ProfileDialog(
                         Spacer(modifier = Modifier.height(6.dp))
 
                         Text(
-                            text = "Set the threshold units to trigger alerts, dashboard notifications, and red tags across the entire app. Synced with Firebase.",
+                            text = "Set the threshold units to trigger alerts, dashboard notifications, and red tags across the entire app. Synced with cloud.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                             textAlign = TextAlign.Start
@@ -509,8 +509,8 @@ fun ProfileDialog(
                                 val parsed = thresholdInput.toDoubleOrNull()
                                 if (parsed != null && parsed >= 1.0) {
                                     viewModel.updateUnitThreshold(parsed)
-                                    thresholdSavedMessage = "Unit threshold set to ${parsed.toInt()} units & synced to Firebase!"
-                                    Toast.makeText(context, "Threshold saved to Firebase: ${parsed.toInt()} units", Toast.LENGTH_SHORT).show()
+                                    thresholdSavedMessage = "Unit threshold set to ${parsed.toInt()} units & synced to cloud!"
+                                    Toast.makeText(context, "Threshold saved: ${parsed.toInt()} units", Toast.LENGTH_SHORT).show()
                                 } else {
                                     Toast.makeText(context, "Please enter a valid positive unit threshold", Toast.LENGTH_SHORT).show()
                                 }
@@ -578,7 +578,7 @@ fun ProfileDialog(
                         Spacer(modifier = Modifier.height(6.dp))
                         val deviceId = remember { AdAnalyticsTracker.getDeviceId(context) }
                         Text(
-                            text = "• Device ID: $deviceId\n• Account Type: ${if (currentUser != null && !currentUser!!.isAnonymous) "Google Member" else "Guest"}\n• Daily ad counts, ad types, device ID & IP are actively tracked & synced to Firebase Firestore.",
+                            text = "• Device ID: $deviceId\n• Account Type: ${if (currentUser != null && !currentUser!!.isAnonymous) "Google Member" else "Guest"}\n• Daily ad counts, ad types, device ID & IP are actively tracked & synced to cloud.",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
@@ -627,12 +627,20 @@ fun ProfileDialog(
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    TextButton(onClick = onDismiss) {
+                    TextButton(onClick = {
+                        context.findActivity()?.let { activity ->
+                            AdManager.showInterstitialAd(activity) { onDismiss() }
+                        } ?: onDismiss()
+                    }) {
                         Text("Close")
                     }
 
                     Button(
-                        onClick = onSignOut,
+                        onClick = {
+                            context.findActivity()?.let { activity ->
+                                AdManager.showInterstitialAd(activity) { onSignOut() }
+                            } ?: onSignOut()
+                        },
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                         shape = RoundedCornerShape(12.dp)
                     ) {
