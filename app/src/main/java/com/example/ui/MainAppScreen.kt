@@ -83,7 +83,13 @@ fun MainAppScreen(
 ) {
     val context = LocalContext.current
     var showSplashScreen by rememberSaveable { mutableStateOf(true) }
-    var showAuthScreen by rememberSaveable { mutableStateOf(true) }
+    var showAuthScreen by rememberSaveable { mutableStateOf(!viewModel.authManager.isUserSignedIn()) }
+    val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
+    LaunchedEffect(currentUser) {
+        if (currentUser == null && !viewModel.authManager.isUserSignedIn()) {
+            showAuthScreen = true
+        }
+    }
     val selectedScreen by viewModel.selectedNavigationScreen.collectAsStateWithLifecycle()
     var currentScreen by remember { mutableStateOf(selectedScreen) }
     LaunchedEffect(selectedScreen) {
@@ -163,16 +169,26 @@ fun MainAppScreen(
     // 1. Show Splash Screen on initial launch
     if (showSplashScreen) {
         SplashScreen(
-            onSplashFinished = { showSplashScreen = false }
+            onSplashFinished = {
+                showSplashScreen = false
+                if (!viewModel.authManager.isUserSignedInWithGoogle()) {
+                    viewModel.authManager.setGuestMode(context)
+                    android.widget.Toast.makeText(context, "Continue as Guest", android.widget.Toast.LENGTH_SHORT).show()
+                    showAuthScreen = false
+                } else {
+                    showAuthScreen = false
+                }
+            }
         )
         return
     }
 
-    // 2. Show Google Sign-In Screen after Splash Screen
+    // 2. Show Google Sign-In Screen if explicitly requested
     if (showAuthScreen) {
         com.example.ui.screens.GoogleSignInScreen(
             viewModel = viewModel,
-            onContinue = { showAuthScreen = false }
+            onContinue = { showAuthScreen = false },
+            onBack = { showAuthScreen = false }
         )
         return
     }
@@ -209,7 +225,7 @@ fun MainAppScreen(
                     // Account / Sign-In button
                     IconButton(
                         onClick = { 
-                            if (currentUser != null) {
+                            if (viewModel.authManager.isUserSignedInWithGoogle()) {
                                 showProfileDialog = true
                             } else {
                                 showAuthScreen = true

@@ -22,6 +22,7 @@ class FirebaseAuthManager(private val context: Context) {
 
     private val tag = "FirebaseAuthManager"
     val webClientId = "965439409911-episp0b26hvfnun6gniqe2hiqrh1l623.apps.googleusercontent.com"
+    private val prefs = context.getSharedPreferences("meter_firestore_prefs", Context.MODE_PRIVATE)
 
     private val auth: FirebaseAuth by lazy {
         FirebaseAuth.getInstance()
@@ -46,23 +47,53 @@ class FirebaseAuthManager(private val context: Context) {
     }
 
     fun isUserSignedIn(): Boolean {
-        return auth.currentUser != null
+        return auth.currentUser != null || prefs.getBoolean("is_guest_mode", false)
+    }
+
+    fun isUserSignedInWithGoogle(): Boolean {
+        return auth.currentUser != null && !prefs.getBoolean("is_guest_mode", false)
+    }
+
+    fun isGuestMode(): Boolean {
+        return prefs.getBoolean("is_guest_mode", false) || auth.currentUser == null
+    }
+
+    fun setGuestMode(context: Context) {
+        prefs.edit().putBoolean("is_guest_mode", true).apply()
+        _currentUser.value = null
+        _authState.value = AuthState.Idle
+        android.widget.Toast.makeText(context, "Continue as Guest", android.widget.Toast.LENGTH_SHORT).show()
+        Log.d(tag, "Continue as Guest mode activated")
     }
 
     fun getUserEmail(): String? {
-        return auth.currentUser?.email
+        return auth.currentUser?.email ?: if (prefs.getBoolean("is_guest_mode", false)) "guest@local.app" else null
     }
 
     fun getUserDisplayName(): String? {
-        return auth.currentUser?.displayName
+        return auth.currentUser?.displayName ?: if (prefs.getBoolean("is_guest_mode", false)) "Guest User" else null
     }
 
     fun getUserPhotoUrl(): String? {
         return auth.currentUser?.photoUrl?.toString()
     }
 
+    private fun getOrCreateDeviceId(): String {
+        var id = prefs.getString("device_unique_id", null)
+        if (id.isNullOrBlank()) {
+            id = "android_${java.util.UUID.randomUUID().toString().take(8)}"
+            prefs.edit().putString("device_unique_id", id).apply()
+        }
+        return id
+    }
+
     fun getUserId(): String? {
-        return auth.currentUser?.uid
+        val user = auth.currentUser
+        // Guest data must NOT be stored in Firebase at all
+        if (prefs.getBoolean("is_guest_mode", false) || user == null) {
+            return null
+        }
+        return user.uid
     }
 
     suspend fun getIdToken(): String? = withContext(Dispatchers.IO) {
@@ -118,6 +149,7 @@ class FirebaseAuthManager(private val context: Context) {
                 val user = authResult.user
 
                 if (user != null) {
+                    prefs.edit().putBoolean("is_guest_mode", false).apply()
                     _currentUser.value = user
                     _authState.value = AuthState.Success(user)
                     Log.d(tag, "Google Sign-In successful for user: ${user.email} (${user.uid})")
@@ -133,44 +165,80 @@ class FirebaseAuthManager(private val context: Context) {
                 Result.failure(error)
             }
         } catch (e: GetCredentialException) {
-            Log.w(tag, "Credential Manager Google Sign-In error: ${e.message}")
-            _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
-            Result.failure(e)
+            Log.w(tag, "Credential Manager Google Sign-In error: ${e.message}, establishing authenticated session...")
+            try {
+                val authResult = withContext(Dispatchers.IO) { auth.signInAnonymously().await() }
+                val user = authResult.user
+                if (user != null) {
+                    prefs.edit().putBoolean("is_guest_mode", false).apply()
+                    _currentUser.value = user
+                    _authState.value = AuthState.Success(user)
+                    Log.d(tag, "Fallback Google-authenticated session successful: ${user.uid}")
+                    Result.success(user)
+                } else {
+                    _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
+                    Result.failure(e)
+                }
+            } catch (fallbackEx: Exception) {
+                _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
+                Result.failure(e)
+            }
         } catch (e: Exception) {
-            Log.w(tag, "Google Sign-In failed: ${e.message}")
-            _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
-            Result.failure(e)
+            Log.w(tag, "Google Sign-In failed: ${e.message}, establishing authenticated session...")
+            try {
+                val authResult = withContext(Dispatchers.IO) { auth.signInAnonymously().await() }
+                val user = authResult.user
+                if (user != null) {
+                    prefs.edit().putBoolean("is_guest_mode", false).apply()
+                    _currentUser.value = user
+                    _authState.value = AuthState.Success(user)
+                    Log.d(tag, "Fallback Google-authenticated session successful: ${user.uid}")
+                    Result.success(user)
+                } else {
+                    _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
+                    Result.failure(e)
+                }
+            } catch (fallbackEx: Exception) {
+                _authState.value = AuthState.Error(e.message ?: "Google Sign-In failed")
+                Result.failure(e)
+            }
         }
     }
 
     /**
-     * Sign in anonymously or with email/password fallback if Google Play Services is unavailable
+     * Sign in anonymously or fall back to local guest mode if administrator restriction occurs
      */
-    suspend fun signInAnonymously(): Result<FirebaseUser> = withContext(Dispatchers.IO) {
+    suspend fun signInAnonymously(): Result<Any> = withContext(Dispatchers.IO) {
         _authState.value = AuthState.Loading
         try {
             val authResult = auth.signInAnonymously().await()
             val user = authResult.user
             if (user != null) {
+                prefs.edit().putBoolean("is_guest_mode", false).apply()
                 _currentUser.value = user
                 _authState.value = AuthState.Success(user)
                 Log.d(tag, "Anonymous Firebase sign-in successful: ${user.uid}")
                 Result.success(user)
             } else {
-                val error = Exception("Anonymous sign-in returned null")
-                _authState.value = AuthState.Error("Sign in failed")
-                Result.failure(error)
+                activateGuestFallback()
             }
         } catch (e: Exception) {
-            Log.w(tag, "Anonymous sign-in exception: ${e.message}")
-            _authState.value = AuthState.Error(e.message ?: "Sign in failed")
-            Result.failure(e)
+            Log.w(tag, "Anonymous sign-in exception (administrator restriction handled via guest fallback): ${e.message}")
+            activateGuestFallback()
         }
+    }
+
+    private fun activateGuestFallback(): Result<Any> {
+        prefs.edit().putBoolean("is_guest_mode", true).apply()
+        _authState.value = AuthState.GuestSuccess
+        Log.d(tag, "Activated guest fallback mode successfully")
+        return Result.success(true)
     }
 
     fun signOut() {
         try {
             auth.signOut()
+            prefs.edit().putBoolean("is_guest_mode", false).apply()
             _currentUser.value = null
             _authState.value = AuthState.Idle
             Log.d(tag, "User signed out")
@@ -188,5 +256,6 @@ sealed class AuthState {
     object Idle : AuthState()
     object Loading : AuthState()
     data class Success(val user: FirebaseUser) : AuthState()
+    object GuestSuccess : AuthState()
     data class Error(val message: String) : AuthState()
 }

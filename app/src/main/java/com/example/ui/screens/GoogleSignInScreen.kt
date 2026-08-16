@@ -24,6 +24,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
@@ -74,7 +75,8 @@ import com.example.viewmodel.MeterViewModel
 fun GoogleSignInScreen(
     viewModel: MeterViewModel,
     onContinue: () -> Unit,
-    modifier: Modifier = Modifier
+    modifier: Modifier = Modifier,
+    onBack: (() -> Unit)? = null
 ) {
     val context = LocalContext.current
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
@@ -84,7 +86,7 @@ fun GoogleSignInScreen(
     val scrollState = rememberScrollState()
     val scope = rememberCoroutineScope()
 
-    // Auto-proceed if already signed in
+    // Auto-proceed only when signed in with Google
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
             onContinue()
@@ -135,6 +137,22 @@ fun GoogleSignInScreen(
                 horizontalAlignment = Alignment.CenterHorizontally,
                 modifier = Modifier.fillMaxWidth()
             ) {
+                if (onBack != null) {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.Start
+                    ) {
+                        androidx.compose.material3.IconButton(onClick = onBack) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                                contentDescription = "Back",
+                                tint = Color.White
+                            )
+                        }
+                    }
+                    Spacer(modifier = Modifier.height(8.dp))
+                }
+
                 // Brand Emblem
                 Box(
                     modifier = Modifier
@@ -187,131 +205,11 @@ fun GoogleSignInScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Main Content: If user is logged in vs not logged in
-            if (currentUser != null) {
-                // SIGNED IN STATE
-                Card(
-                    shape = RoundedCornerShape(20.dp),
-                    colors = CardDefaults.cardColors(
-                        containerColor = Color(0xFF1E293B).copy(alpha = 0.85f)
-                    ),
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .border(1.5.dp, SuccessGreen.copy(alpha = 0.5f), RoundedCornerShape(20.dp))
-                ) {
-                    Column(
-                        modifier = Modifier.padding(20.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Default.CheckCircle,
-                                contentDescription = "Signed In",
-                                tint = SuccessGreen,
-                                modifier = Modifier.size(24.dp)
-                            )
-                            Spacer(modifier = Modifier.width(8.dp))
-                            Text(
-                                text = "Signed In to Firebase",
-                                style = MaterialTheme.typography.titleMedium.copy(
-                                    fontWeight = FontWeight.Bold,
-                                    fontSize = 16.sp
-                                ),
-                                color = SuccessGreen
-                            )
-                        }
-
-                        Spacer(modifier = Modifier.height(14.dp))
-
-                        Text(
-                            text = currentUser?.displayName ?: "Google User",
-                            style = MaterialTheme.typography.titleMedium.copy(
-                                fontWeight = FontWeight.Bold,
-                                fontSize = 18.sp
-                            ),
-                            color = Color.White,
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(4.dp))
-
-                        Text(
-                            text = currentUser?.email ?: currentUser?.uid ?: "",
-                            style = MaterialTheme.typography.bodySmall.copy(
-                                fontSize = 13.sp
-                            ),
-                            color = Color(0xFF94A3B8),
-                            textAlign = TextAlign.Center
-                        )
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        // Cloud status pill
-                        Surface(
-                            color = Color(0xFF0F172A),
-                            shape = RoundedCornerShape(12.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Row(
-                                modifier = Modifier.padding(12.dp),
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.Center
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Default.CloudDone,
-                                    contentDescription = "Cloud",
-                                    tint = EnergyCyan,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Spacer(modifier = Modifier.width(8.dp))
-                                Text(
-                                    text = "Firestore: kinza-digital-hub",
-                                    style = MaterialTheme.typography.bodySmall.copy(
-                                        fontWeight = FontWeight.SemiBold,
-                                        fontSize = 12.sp
-                                    ),
-                                    color = Color(0xFFE2E8F0)
-                                )
-                            }
-                        }
-
-                        Spacer(modifier = Modifier.height(16.dp))
-
-                        Row(
-                            modifier = Modifier.fillMaxWidth(),
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            OutlinedButton(
-                                onClick = { viewModel.authManager.signOut() },
-                                shape = RoundedCornerShape(10.dp),
-                                modifier = Modifier.weight(1f)
-                            ) {
-                                Text("Sign Out", color = Color(0xFFCBD5E1), fontSize = 13.sp)
-                            }
-
-                            Button(
-                                onClick = {
-                                    viewModel.forcePushAllData(context)
-                                    onContinue()
-                                },
-                                shape = RoundedCornerShape(10.dp),
-                                colors = ButtonDefaults.buttonColors(containerColor = ElectricBlue),
-                                modifier = Modifier.weight(1.4f)
-                            ) {
-                                Text("Open Tracker", fontWeight = FontWeight.Bold, fontSize = 13.sp)
-                            }
-                        }
-                    }
-                }
-            } else {
-                // NOT SIGNED IN STATE
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
-                ) {
+            // Not signed in state (always show sign-in / guest login options)
+            Column(
+                modifier = Modifier.fillMaxWidth(),
+                verticalArrangement = Arrangement.spacedBy(16.dp)
+            ) {
                     // Feature Cards
                     Card(
                         shape = RoundedCornerShape(18.dp),
@@ -515,7 +413,12 @@ fun GoogleSignInScreen(
 
                     // Fallback Anonymous / Guest auth button
                     TextButton(
-                        onClick = { scope.launch { viewModel.authManager.signInAnonymously() } },
+                        onClick = {
+                            scope.launch {
+                                viewModel.signInAnonymously(context)
+                                onContinue()
+                            }
+                        },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
@@ -530,7 +433,6 @@ fun GoogleSignInScreen(
                         )
                     }
                 }
-            }
 
             Spacer(modifier = Modifier.height(16.dp))
 

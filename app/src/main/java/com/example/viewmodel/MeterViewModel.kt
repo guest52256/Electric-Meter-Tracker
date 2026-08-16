@@ -137,9 +137,32 @@ class MeterViewModel(
 
     fun signOut(context: Context) {
         viewModelScope.launch {
-            repository.clearLocalDatabase()
-            authManager.signOut()
-            android.widget.Toast.makeText(context, "Signed out", android.widget.Toast.LENGTH_SHORT).show()
+            val syncMgr = repository.firestoreSyncManager
+            var pending = syncMgr.syncStatus.value.pendingCount
+            if (pending > 0) {
+                android.widget.Toast.makeText(context, "Syncing pending records before sign out...", android.widget.Toast.LENGTH_SHORT).show()
+                syncMgr.syncPendingQueue()
+                
+                var attempts = 0
+                while (syncMgr.syncStatus.value.pendingCount > 0 && attempts < 10) {
+                    kotlinx.coroutines.delay(1000L)
+                    syncMgr.syncPendingQueue()
+                    attempts++
+                }
+                pending = syncMgr.syncStatus.value.pendingCount
+            }
+
+            if (pending > 0) {
+                android.widget.Toast.makeText(
+                    context,
+                    "Cannot sign out: $pending record(s) still pending sync with Firebase.",
+                    android.widget.Toast.LENGTH_LONG
+                ).show()
+            } else {
+                repository.clearLocalDatabase()
+                authManager.signOut()
+                android.widget.Toast.makeText(context, "Data fully synced. Signed out successfully.", android.widget.Toast.LENGTH_SHORT).show()
+            }
         }
     }
 
@@ -148,9 +171,23 @@ class MeterViewModel(
             val result = repository.firestoreSyncManager.forcePushAllData()
             withContext(Dispatchers.Main) {
                 if (result.isSuccess) {
-                    android.widget.Toast.makeText(context, "Data synced to Firestore successfully!", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(context, "Data inserted/uploaded to Firestore successfully!", android.widget.Toast.LENGTH_LONG).show()
                 } else {
-                    android.widget.Toast.makeText(context, "Sync Error: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+                    android.widget.Toast.makeText(context, "Upload Error: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
+                }
+            }
+        }
+    }
+
+    fun performCombinedSyncAndUpload(context: Context) {
+        viewModelScope.launch(Dispatchers.IO) {
+            val result = repository.firestoreSyncManager.performCombinedSyncAndUpload()
+            withContext(Dispatchers.Main) {
+                if (result.isSuccess) {
+                    val count = result.getOrNull() ?: 0
+                    android.widget.Toast.makeText(context, "Sync & upload completed successfully! ($count records processed)", android.widget.Toast.LENGTH_LONG).show()
+                } else {
+                    android.widget.Toast.makeText(context, "Sync & Upload Error: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
                 }
             }
         }

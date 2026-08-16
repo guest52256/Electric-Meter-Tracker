@@ -12,7 +12,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ui.MainAppScreen
 import com.example.ui.theme.MyApplicationTheme
-import com.example.util.NotificationHelper
+
 import com.example.viewmodel.MeterViewModel
 import com.example.viewmodel.MeterViewModelFactory
 
@@ -44,9 +44,6 @@ class MainActivity : ComponentActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
-
-    NotificationHelper.createNotificationChannel(this)
-    NotificationHelper.showOngoingNotification(this)
 
     // Handle intents from notification
     handleIntent(intent)

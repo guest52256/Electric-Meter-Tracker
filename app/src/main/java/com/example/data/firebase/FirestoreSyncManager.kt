@@ -458,35 +458,37 @@ class FirestoreSyncManager(
 
         var pushedSuccessfully = false
 
-        // 1. Direct REST write with Auth token
-        try {
-            val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("users/$userId/meters", docId, meterMap, idToken)
-            if (restResult.isSuccess) {
-                pushedSuccessfully = true
-            }
-        } catch (e: Exception) {
-            Log.w(tag, "REST meter push notice: ${e.message}")
-        }
-
-        // 2. Native SDK write
+        // 1. Native SDK write
         if (db != null) {
             try {
                 val task = db.collection("users/$userId/meters").document(docId).set(meterMap, SetOptions.merge())
-                awaitTaskWithTimeout(task, 3000L)
+                awaitTaskWithTimeout(task, 4000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
                 Log.w(tag, "SDK meter push notice: ${e.message}")
             }
         }
 
-        if (pushedSuccessfully || db != null) {
+        // 2. Direct REST write with Auth token as fallback
+        if (!pushedSuccessfully) {
+            try {
+                val idToken = authManager.getIdToken()
+                val restResult = restApi.putDocument("users/$userId/meters", docId, meterMap, idToken)
+                if (restResult.isSuccess) {
+                    pushedSuccessfully = true
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "REST meter push notice: ${e.message}")
+            }
+        }
+
+        if (pushedSuccessfully) {
             mDao?.markMeterSynced(meter.id, System.currentTimeMillis())
             qDao?.deleteByDocumentId(docId)
             qDao?.deleteOperation(docId)
-            com.example.widget.MeterWidgetUpdater.updateAllWidgets(context)
             Log.d(tag, "Meter $docId successfully synced to Firestore")
         } else {
+            Log.w(tag, "Failed to push meter $docId to Firestore")
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
@@ -524,35 +526,37 @@ class FirestoreSyncManager(
 
         var pushedSuccessfully = false
 
-        // 1. Direct REST write with Auth token
-        try {
-            val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("users/$userId/billingCycles", docId, cycleMap, idToken)
-            if (restResult.isSuccess) {
-                pushedSuccessfully = true
-            }
-        } catch (e: Exception) {
-            Log.w(tag, "REST cycle push notice: ${e.message}")
-        }
-
-        // 2. Native SDK write
+        // 1. Native SDK write
         if (db != null) {
             try {
                 val task = db.collection("users/$userId/billingCycles").document(docId).set(cycleMap, SetOptions.merge())
-                awaitTaskWithTimeout(task, 3000L)
+                awaitTaskWithTimeout(task, 4000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
                 Log.w(tag, "SDK cycle push notice: ${e.message}")
             }
         }
 
-        if (pushedSuccessfully || db != null) {
+        // 2. Direct REST write with Auth token as fallback
+        if (!pushedSuccessfully) {
+            try {
+                val idToken = authManager.getIdToken()
+                val restResult = restApi.putDocument("users/$userId/billingCycles", docId, cycleMap, idToken)
+                if (restResult.isSuccess) {
+                    pushedSuccessfully = true
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "REST cycle push notice: ${e.message}")
+            }
+        }
+
+        if (pushedSuccessfully) {
             bDao?.markBillingCycleSynced(cycle.meterId, System.currentTimeMillis())
             qDao?.deleteByDocumentId(docId)
             qDao?.deleteOperation(docId)
-            com.example.widget.MeterWidgetUpdater.updateAllWidgets(context)
             Log.d(tag, "Billing cycle $docId successfully synced to Firestore")
         } else {
+            Log.w(tag, "Failed to push billing cycle $docId to Firestore")
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
@@ -597,35 +601,37 @@ class FirestoreSyncManager(
 
         var pushedSuccessfully = false
 
-        // 1. Direct REST write with Auth token
-        try {
-            val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("users/$userId/dailyReadings", docId, readingMap, idToken)
-            if (restResult.isSuccess) {
-                pushedSuccessfully = true
-            }
-        } catch (e: Exception) {
-            Log.w(tag, "REST reading push notice: ${e.message}")
-        }
-
-        // 2. Native SDK write
+        // 1. Native SDK write
         if (db != null) {
             try {
                 val task = db.collection("users/$userId/dailyReadings").document(docId).set(readingMap, SetOptions.merge())
-                awaitTaskWithTimeout(task, 3000L)
+                awaitTaskWithTimeout(task, 4000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
                 Log.w(tag, "SDK reading push notice: ${e.message}")
             }
         }
 
-        if (pushedSuccessfully || db != null) {
+        // 2. Direct REST write with Auth token as fallback
+        if (!pushedSuccessfully) {
+            try {
+                val idToken = authManager.getIdToken()
+                val restResult = restApi.putDocument("users/$userId/dailyReadings", docId, readingMap, idToken)
+                if (restResult.isSuccess) {
+                    pushedSuccessfully = true
+                }
+            } catch (e: Exception) {
+                Log.w(tag, "REST reading push notice: ${e.message}")
+            }
+        }
+
+        if (pushedSuccessfully) {
             dDao?.markReadingSynced(reading.id, System.currentTimeMillis())
             qDao?.deleteByDocumentId(docId)
             qDao?.deleteOperation(docId)
-            com.example.widget.MeterWidgetUpdater.updateAllWidgets(context)
             Log.d(tag, "Daily reading $docId successfully synced to Firestore")
         } else {
+            Log.w(tag, "Failed to push daily reading $docId to Firestore")
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
@@ -890,7 +896,6 @@ class FirestoreSyncManager(
                 syncMessage = "All data synced",
                 errorMessage = null
             )
-            com.example.widget.MeterWidgetUpdater.updateAllWidgets(context)
 
             Result.success(Unit)
         } catch (e: Exception) {
@@ -908,6 +913,163 @@ class FirestoreSyncManager(
                     state = if (networkMonitor.isOnline.value) SyncState.SYNCED else SyncState.OFFLINE
                 )
             }
+        }
+    }
+
+    /**
+     * Pull/Retrieve all remote data from Firestore collection into local Room database
+     */
+    suspend fun pullDataFromFirestore(): Result<Int> = withContext(Dispatchers.IO) {
+        val mDao = meterDao ?: return@withContext Result.failure(IllegalStateException("MeterDao is null"))
+        val bDao = billingCycleDao ?: return@withContext Result.failure(IllegalStateException("BillingCycleDao is null"))
+        val dDao = dailyReadingDao ?: return@withContext Result.failure(IllegalStateException("DailyReadingDao is null"))
+        val db = firestore ?: return@withContext Result.failure(IllegalStateException("Firestore is null"))
+
+        if (!networkMonitor.isOnline.value) {
+            return@withContext Result.failure(IllegalStateException("Device is offline"))
+        }
+
+        val userId = authManager.getUserId() ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
+
+        _syncStatus.value = _syncStatus.value.copy(
+            state = SyncState.SYNCING,
+            isSyncing = true,
+            syncMessage = "Retrieving (pulling) data from Firestore..."
+        )
+
+        var pulledCount = 0
+        try {
+            // 1. Pull meters
+            val metersSnap = awaitTaskWithTimeout(db.collection("users/$userId/meters").get(), 5000L)
+            if (metersSnap != null) {
+                for (doc in metersSnap.documents) {
+                    val id = doc.getLong("id") ?: doc.id.removePrefix("meter_").toLongOrNull() ?: continue
+                    val name = doc.getString("name") ?: "Meter $id"
+                    val isActive = doc.getBoolean("isActive") ?: true
+                    val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                    val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val local = mDao.getMeterById(id)
+                    if (local == null) {
+                        mDao.insertMeter(
+                            Meter(
+                                id = id,
+                                name = name,
+                                isActive = isActive,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        pulledCount++
+                    }
+                }
+            }
+
+            // 2. Pull billing cycles
+            val cyclesSnap = awaitTaskWithTimeout(db.collection("users/$userId/billingCycles").get(), 5000L)
+            if (cyclesSnap != null) {
+                for (doc in cyclesSnap.documents) {
+                    val meterId = doc.getLong("meterId") ?: doc.id.removePrefix("cycle_").toLongOrNull() ?: continue
+                    val prevReading = doc.getDouble("previousBillReading") ?: 0.0
+                    val cycleStartDate = doc.getLong("cycleStartDate") ?: System.currentTimeMillis()
+                    val cycleStartFormattedDate = doc.getString("cycleStartFormattedDate") ?: ""
+                    val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                    val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val localCycle = bDao.getBillingCycleForMeterDirect(meterId)
+                    if (localCycle == null) {
+                        bDao.insertOrUpdateBillingCycle(
+                            MeterBillingCycle(
+                                meterId = meterId,
+                                previousBillReading = prevReading,
+                                cycleStartDate = cycleStartDate,
+                                cycleStartFormattedDate = cycleStartFormattedDate,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        pulledCount++
+                    }
+                }
+            }
+
+            // 3. Pull daily readings
+            val readingsSnap = awaitTaskWithTimeout(db.collection("users/$userId/dailyReadings").get(), 5000L)
+            if (readingsSnap != null) {
+                for (doc in readingsSnap.documents) {
+                    val id = doc.getLong("id") ?: doc.id.removePrefix("reading_").toLongOrNull() ?: continue
+                    val meterId = doc.getLong("meterId") ?: 1L
+                    val dateString = doc.getString("dateString") ?: ""
+                    val meterName = doc.getString("meterName") ?: "Meter"
+                    val timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                    val prevBill = doc.getDouble("previousBillReading") ?: 0.0
+                    val currentR = doc.getDouble("currentReading") ?: 0.0
+                    val units = doc.getDouble("unitsSinceBill") ?: (currentR - prevBill)
+                    val isAlert = doc.getBoolean("isAlert") ?: (units >= 100.0)
+                    val alertText = doc.getString("alertStatusText") ?: if (isAlert) "ALERT" else "NORMAL"
+                    val notes = doc.getString("notes") ?: ""
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val existing = dDao.getReadingForMeterAndDate(meterId, dateString)
+                        ?: dDao.getReadingById(id)
+
+                    if (existing == null) {
+                        dDao.insertReading(
+                            DailyReading(
+                                id = id,
+                                meterId = meterId,
+                                meterName = meterName,
+                                dateString = dateString,
+                                timestamp = timestamp,
+                                previousBillReading = prevBill,
+                                currentReading = currentR,
+                                unitsSinceBill = units,
+                                isAlert = isAlert,
+                                alertStatusText = alertText,
+                                notes = notes,
+                                createdAt = timestamp,
+                                updatedAt = timestamp,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        pulledCount++
+                    }
+                }
+            }
+
+            val now = System.currentTimeMillis()
+            prefs.edit().putLong("last_synced_at", now).apply()
+            _syncStatus.value = _syncStatus.value.copy(
+                state = SyncState.SYNCED,
+                isSyncing = false,
+                lastSyncedAt = now,
+                syncMessage = "Successfully retrieved $pulledCount records from Firestore!"
+            )
+            Result.success(pulledCount)
+        } catch (e: Exception) {
+            Log.w(tag, "pullDataFromFirestore error: ${e.message}")
+            _syncStatus.value = _syncStatus.value.copy(
+                state = if (networkMonitor.isOnline.value) SyncState.SYNCED else SyncState.OFFLINE,
+                isSyncing = false,
+                errorMessage = e.message
+            )
+            Result.failure(e)
         }
     }
 
@@ -973,6 +1135,255 @@ class FirestoreSyncManager(
     suspend fun performFullSync(): Result<Unit> {
         forcePushAllData()
         return syncPendingQueue()
+    }
+
+    /**
+     * Combined sync and upload function:
+     * 1. Pulls remote records from Firestore and updates/reconciles local Room storage.
+     * 2. Detects admin deletions: removes local records if they were deleted on remote Firestore.
+     * 3. Pushes/uploads any pending local additions or edits to Firestore.
+     */
+    suspend fun performCombinedSyncAndUpload(): Result<Int> = withContext(Dispatchers.IO) {
+        val mDao = meterDao ?: return@withContext Result.failure(IllegalStateException("MeterDao is null"))
+        val bDao = billingCycleDao ?: return@withContext Result.failure(IllegalStateException("BillingCycleDao is null"))
+        val dDao = dailyReadingDao ?: return@withContext Result.failure(IllegalStateException("DailyReadingDao is null"))
+        val db = firestore ?: return@withContext Result.failure(IllegalStateException("Firestore is null"))
+
+        if (!networkMonitor.isOnline.value) {
+            return@withContext Result.failure(IllegalStateException("Device is offline"))
+        }
+
+        val userId = authManager.getUserId() ?: return@withContext Result.failure(IllegalStateException("Not signed in"))
+
+        _syncStatus.value = _syncStatus.value.copy(
+            state = SyncState.SYNCING,
+            isSyncing = true,
+            syncMessage = "Checking remote database and syncing..."
+        )
+
+        var totalProcessed = 0
+        try {
+            val localMeters = mDao.getAllMetersList()
+            val localCycles = bDao.getAllBillingCyclesList()
+            val localReadings = dDao.getAllDailyReadingsList()
+
+            // Step 1: Pull remote data and verify remote deletions (admin deletion reflection)
+            val remoteMeterIds = mutableSetOf<Long>()
+            val metersSnap = awaitTaskWithTimeout(db.collection("users/$userId/meters").get(), 5000L)
+            if (metersSnap != null) {
+                for (doc in metersSnap.documents) {
+                    val id = doc.getLong("id") ?: doc.id.removePrefix("meter_").toLongOrNull() ?: continue
+                    remoteMeterIds.add(id)
+                    val name = doc.getString("name") ?: "Meter $id"
+                    val isActive = doc.getBoolean("isActive") ?: true
+                    val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                    val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val local = mDao.getMeterById(id)
+                    if (local == null) {
+                        mDao.insertMeter(
+                            Meter(
+                                id = id,
+                                name = name,
+                                isActive = isActive,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        totalProcessed++
+                    } else if (local.syncStatus == "SYNCED") {
+                        mDao.updateMeter(
+                            local.copy(
+                                name = name,
+                                isActive = isActive,
+                                updatedAt = updatedAt,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                    }
+                }
+            }
+
+            // Remove local meters that were deleted on remote Firestore by admin
+            for (localMeter in localMeters) {
+                if (localMeter.syncStatus == "SYNCED" && !remoteMeterIds.contains(localMeter.id)) {
+                    Log.d(tag, "Admin deleted meter ${localMeter.id} on Firestore. Removing locally.")
+                    mDao.deleteMeter(localMeter.id)
+                    // Also delete associated billing cycles and readings locally
+                    bDao.deleteBillingCycleForMeter(localMeter.id)
+                    dDao.deleteReadingsForMeter(localMeter.id)
+                }
+            }
+
+            val remoteCycleMeterIds = mutableSetOf<Long>()
+            val cyclesSnap = awaitTaskWithTimeout(db.collection("users/$userId/billingCycles").get(), 5000L)
+            if (cyclesSnap != null) {
+                for (doc in cyclesSnap.documents) {
+                    val meterId = doc.getLong("meterId") ?: doc.id.removePrefix("cycle_").toLongOrNull() ?: continue
+                    remoteCycleMeterIds.add(meterId)
+                    val prevReading = doc.getDouble("previousBillReading") ?: 0.0
+                    val cycleStartDate = doc.getLong("cycleStartDate") ?: System.currentTimeMillis()
+                    val cycleStartFormattedDate = doc.getString("cycleStartFormattedDate") ?: ""
+                    val createdAt = doc.getLong("createdAt") ?: System.currentTimeMillis()
+                    val updatedAt = doc.getLong("updatedAt") ?: System.currentTimeMillis()
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val localCycle = bDao.getBillingCycleForMeterDirect(meterId)
+                    if (localCycle == null) {
+                        bDao.insertOrUpdateBillingCycle(
+                            MeterBillingCycle(
+                                meterId = meterId,
+                                previousBillReading = prevReading,
+                                cycleStartDate = cycleStartDate,
+                                cycleStartFormattedDate = cycleStartFormattedDate,
+                                createdAt = createdAt,
+                                updatedAt = updatedAt,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        totalProcessed++
+                    } else if (localCycle.syncStatus == "SYNCED") {
+                        bDao.insertOrUpdateBillingCycle(
+                            localCycle.copy(
+                                previousBillReading = prevReading,
+                                cycleStartDate = cycleStartDate,
+                                cycleStartFormattedDate = cycleStartFormattedDate,
+                                updatedAt = updatedAt,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                    }
+                }
+            }
+
+            for (localCycle in localCycles) {
+                if (localCycle.syncStatus == "SYNCED" && !remoteCycleMeterIds.contains(localCycle.meterId)) {
+                    Log.d(tag, "Admin deleted billing cycle for meter ${localCycle.meterId} on Firestore. Removing locally.")
+                    bDao.deleteBillingCycleForMeter(localCycle.meterId)
+                }
+            }
+
+            val remoteReadingIds = mutableSetOf<Long>()
+            val readingsSnap = awaitTaskWithTimeout(db.collection("users/$userId/dailyReadings").get(), 5000L)
+            if (readingsSnap != null) {
+                for (doc in readingsSnap.documents) {
+                    val id = doc.getLong("id") ?: doc.id.removePrefix("reading_").toLongOrNull() ?: continue
+                    remoteReadingIds.add(id)
+                    val meterId = doc.getLong("meterId") ?: 1L
+                    val dateString = doc.getString("dateString") ?: ""
+                    val meterName = doc.getString("meterName") ?: "Meter"
+                    val timestamp = doc.getLong("timestamp") ?: System.currentTimeMillis()
+                    val prevBill = doc.getDouble("previousBillReading") ?: 0.0
+                    val currentR = doc.getDouble("currentReading") ?: 0.0
+                    val units = doc.getDouble("unitsSinceBill") ?: (currentR - prevBill)
+                    val isAlert = doc.getBoolean("isAlert") ?: (units >= 100.0)
+                    val alertText = doc.getString("alertStatusText") ?: if (isAlert) "ALERT" else "NORMAL"
+                    val notes = doc.getString("notes") ?: ""
+                    val remoteDeviceId = doc.getString("deviceId") ?: ""
+                    val version = doc.getLong("version") ?: 1L
+
+                    val existing = dDao.getReadingForMeterAndDate(meterId, dateString)
+                        ?: dDao.getReadingById(id)
+
+                    if (existing == null) {
+                        dDao.insertReading(
+                            DailyReading(
+                                id = id,
+                                meterId = meterId,
+                                meterName = meterName,
+                                dateString = dateString,
+                                timestamp = timestamp,
+                                previousBillReading = prevBill,
+                                currentReading = currentR,
+                                unitsSinceBill = units,
+                                isAlert = isAlert,
+                                alertStatusText = alertText,
+                                notes = notes,
+                                createdAt = timestamp,
+                                updatedAt = timestamp,
+                                deviceId = remoteDeviceId,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                        totalProcessed++
+                    } else if (existing.syncStatus == "SYNCED") {
+                        dDao.updateReading(
+                            existing.copy(
+                                meterName = meterName,
+                                previousBillReading = prevBill,
+                                currentReading = currentR,
+                                unitsSinceBill = units,
+                                isAlert = isAlert,
+                                alertStatusText = alertText,
+                                notes = notes,
+                                updatedAt = timestamp,
+                                lastSyncedAt = System.currentTimeMillis(),
+                                syncStatus = "SYNCED",
+                                version = version
+                            )
+                        )
+                    }
+                }
+            }
+
+            for (localReading in localReadings) {
+                if (localReading.syncStatus == "SYNCED" && !remoteReadingIds.contains(localReading.id)) {
+                    Log.d(tag, "Admin deleted reading ${localReading.id} on Firestore. Removing locally.")
+                    dDao.deleteReading(localReading)
+                }
+            }
+
+            // Step 2: Push/Upload pending local data to Firestore
+            val pendingMeters = mDao.getAllMetersList().filter { it.syncStatus == "PENDING" }
+            for (m in pendingMeters) {
+                pushMeter(m)
+                totalProcessed++
+            }
+            val pendingCycles = bDao.getAllBillingCyclesList().filter { it.syncStatus == "PENDING" }
+            for (c in pendingCycles) {
+                pushBillingCycle(c)
+                totalProcessed++
+            }
+            val pendingReadings = dDao.getAllDailyReadingsList().filter { it.syncStatus == "PENDING" }
+            for (r in pendingReadings) {
+                pushReading(r)
+                totalProcessed++
+            }
+
+            val now = System.currentTimeMillis()
+            prefs.edit().putLong("last_synced_at", now).apply()
+            _syncStatus.value = _syncStatus.value.copy(
+                state = SyncState.SYNCED,
+                isSyncing = false,
+                lastSyncedAt = now,
+                syncMessage = "Combined sync & upload completed successfully!"
+            )
+            Result.success(totalProcessed)
+        } catch (e: Exception) {
+            Log.w(tag, "performCombinedSyncAndUpload error: ${e.message}")
+            _syncStatus.value = _syncStatus.value.copy(
+                state = if (networkMonitor.isOnline.value) SyncState.SYNCED else SyncState.OFFLINE,
+                isSyncing = false,
+                errorMessage = e.message
+            )
+            Result.failure(e)
+        }
     }
 
     fun clearStatusMessage() {

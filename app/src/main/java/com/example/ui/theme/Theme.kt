@@ -231,7 +231,7 @@ fun getThemeColorScheme(
 
 @Composable
 fun MyApplicationTheme(
-    themeMode: AppThemeMode = AppThemeMode.SYSTEM,
+    themeMode: AppThemeMode = AppThemeMode.LIGHT,
     colorPalette: AppColorPalette = AppColorPalette.ELECTRIC_BLUE,
     dynamicColor: Boolean = false,
     content: @Composable () -> Unit,

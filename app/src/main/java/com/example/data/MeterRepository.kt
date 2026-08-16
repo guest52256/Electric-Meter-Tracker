@@ -34,76 +34,6 @@ class MeterRepository(
     init {
         // Initialize Firestore Sync Manager with DAOs
         firestoreSyncManager.initialize(meterDao, billingCycleDao, dailyReadingDao, syncQueueDao)
-
-        // Seed required initial meters if the database is empty
-        scope.launch {
-            seedInitialMetersIfEmpty()
-        }
-    }
-
-    /**
-     * Seeds the initial meters as required:
-     * 1. Muhammad Iqbal S/O Luqman
-     * 2. Sadaqat Ali S/O Liaquat Ali
-     */
-    private suspend fun seedInitialMetersIfEmpty() {
-        val count = meterDao.getMeterCount()
-        if (count == 0) {
-            Log.d(tag, "Seeding initial default meters...")
-            val dateFormat = SimpleDateFormat("dd MMM yyyy", Locale.ENGLISH)
-            val formattedDate = dateFormat.format(Date())
-            val now = System.currentTimeMillis()
-
-            val meter1 = Meter(
-                id = 1L,
-                name = "Muhammad Iqbal S/O Luqman",
-                isActive = true,
-                createdAt = now,
-                updatedAt = now,
-                deviceId = firestoreSyncManager.deviceId,
-                syncStatus = "PENDING"
-            )
-            meterDao.insertMeter(meter1)
-            val cycle1 = MeterBillingCycle(
-                meterId = 1L,
-                previousBillReading = 0.0,
-                cycleStartDate = now,
-                cycleStartFormattedDate = formattedDate,
-                createdAt = now,
-                updatedAt = now,
-                deviceId = firestoreSyncManager.deviceId,
-                syncStatus = "PENDING"
-            )
-            billingCycleDao.insertOrUpdateBillingCycle(cycle1)
-
-            val meter2 = Meter(
-                id = 2L,
-                name = "Sadaqat Ali S/O Liaquat Ali",
-                isActive = true,
-                createdAt = now + 1,
-                updatedAt = now + 1,
-                deviceId = firestoreSyncManager.deviceId,
-                syncStatus = "PENDING"
-            )
-            meterDao.insertMeter(meter2)
-            val cycle2 = MeterBillingCycle(
-                meterId = 2L,
-                previousBillReading = 0.0,
-                cycleStartDate = now + 1,
-                cycleStartFormattedDate = formattedDate,
-                createdAt = now + 1,
-                updatedAt = now + 1,
-                deviceId = firestoreSyncManager.deviceId,
-                syncStatus = "PENDING"
-            )
-            billingCycleDao.insertOrUpdateBillingCycle(cycle2)
-
-            // Trigger sync
-            firestoreSyncManager.pushMeter(meter1)
-            firestoreSyncManager.pushBillingCycle(cycle1)
-            firestoreSyncManager.pushMeter(meter2)
-            firestoreSyncManager.pushBillingCycle(cycle2)
-        }
     }
 
     fun getReadingsForMeter(meterId: Long): Flow<List<DailyReading>> =
@@ -151,7 +81,6 @@ class MeterRepository(
         )
         billingCycleDao.insertOrUpdateBillingCycle(cycle)
 
-        // Asynchronously persist to Firebase Firestore
         scope.launch {
             firestoreSyncManager.pushMeter(savedMeter)
             firestoreSyncManager.pushBillingCycle(cycle)
@@ -344,7 +273,6 @@ class MeterRepository(
 
         val insertedId = dailyReadingDao.insertReading(reading)
         val savedReading = reading.copy(id = if (reading.id != 0L) reading.id else insertedId)
-        com.example.widget.MeterWidgetUpdater.updateAllWidgets(firestoreSyncManager.context)
 
         // Asynchronously persist to Firebase Firestore
         scope.launch {
@@ -393,7 +321,6 @@ class MeterRepository(
         )
 
         dailyReadingDao.updateReading(updatedReading)
-        com.example.widget.MeterWidgetUpdater.updateAllWidgets(firestoreSyncManager.context)
         scope.launch {
             firestoreSyncManager.pushReading(updatedReading)
         }
@@ -403,7 +330,6 @@ class MeterRepository(
 
     suspend fun deleteReading(reading: DailyReading) {
         dailyReadingDao.deleteReading(reading)
-        com.example.widget.MeterWidgetUpdater.updateAllWidgets(firestoreSyncManager.context)
         scope.launch {
             firestoreSyncManager.deleteReading(reading)
         }

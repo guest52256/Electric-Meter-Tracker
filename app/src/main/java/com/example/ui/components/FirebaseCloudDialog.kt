@@ -418,7 +418,7 @@ fun FirebaseCloudDialog(
                         horizontalArrangement = Arrangement.spacedBy(10.dp)
                     ) {
                         OutlinedButton(
-                            onClick = { viewModel.triggerCloudSync() },
+                            onClick = { viewModel.performCombinedSyncAndUpload(context) },
                             enabled = !syncStatus.isSyncing,
                             shape = RoundedCornerShape(12.dp),
                             modifier = Modifier
@@ -427,12 +427,12 @@ fun FirebaseCloudDialog(
                         ) {
                             Icon(
                                 imageVector = Icons.Default.Sync,
-                                contentDescription = "Sync",
+                                contentDescription = "Sync & Upload",
                                 modifier = Modifier.size(16.dp),
                                 tint = Slate800
                             )
                             Spacer(modifier = Modifier.width(6.dp))
-                            Text("Quick Sync", color = Slate800, fontSize = 13.sp)
+                            Text("Sync & Upload", color = Slate800, fontSize = 12.sp)
                         }
 
                         OutlinedButton(

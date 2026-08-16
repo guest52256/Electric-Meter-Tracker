@@ -68,11 +68,11 @@ class ThemePreferences(context: Context) {
     val colorPalette: StateFlow<AppColorPalette> = _colorPalette.asStateFlow()
 
     private fun loadThemeMode(): AppThemeMode {
-        val saved = prefs.getString("theme_mode", AppThemeMode.SYSTEM.name)
+        val saved = prefs.getString("theme_mode", AppThemeMode.LIGHT.name)
         return try {
-            AppThemeMode.valueOf(saved ?: AppThemeMode.SYSTEM.name)
+            AppThemeMode.valueOf(saved ?: AppThemeMode.LIGHT.name)
         } catch (e: Exception) {
-            AppThemeMode.SYSTEM
+            AppThemeMode.LIGHT
         }
     }
 
