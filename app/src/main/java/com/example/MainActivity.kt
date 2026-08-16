@@ -22,11 +22,34 @@ class MainActivity : ComponentActivity() {
     MeterViewModelFactory(application)
   }
 
+  override fun onNewIntent(intent: android.content.Intent) {
+    super.onNewIntent(intent)
+    handleIntent(intent)
+  }
+
+  private fun handleIntent(intent: android.content.Intent?) {
+    when (intent?.action) {
+      "ACTION_ADD_BILL_CYCLE" -> {
+          meterViewModel.selectedNavigationScreen.value = com.example.ui.navigation.Screen.BILL_CYCLE
+      }
+      "ACTION_ADD_READING" -> {
+          meterViewModel.selectedNavigationScreen.value = com.example.ui.navigation.Screen.ADD_READING
+      }
+      "ACTION_DEV_INFO" -> {
+          meterViewModel.showDeveloperDialog.value = true
+      }
+    }
+  }
+
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     enableEdgeToEdge()
 
     NotificationHelper.createNotificationChannel(this)
+    NotificationHelper.showOngoingNotification(this)
+
+    // Handle intents from notification
+    handleIntent(intent)
 
     setContent {
       val currentThemeMode by meterViewModel.themeMode.collectAsStateWithLifecycle()

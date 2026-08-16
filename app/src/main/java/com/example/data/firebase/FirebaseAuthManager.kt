@@ -79,9 +79,12 @@ class FirebaseAuthManager(private val context: Context) {
     /**
      * Sign in using Credential Manager with Google ID Token
      */
-    suspend fun signInWithGoogle(activityContext: Context): Result<FirebaseUser> = withContext(Dispatchers.IO) {
+    suspend fun signInWithGoogle(activityContext: Context): Result<FirebaseUser> = withContext(Dispatchers.Main) {
         _authState.value = AuthState.Loading
         try {
+            // First, try to clear any cached identity to force the account picker if needed,
+            // though credential manager handles this mostly automatically.
+            
             val googleIdOption = GetGoogleIdOption.Builder()
                 .setFilterByAuthorizedAccounts(false)
                 .setServerClientId(webClientId)
@@ -92,9 +95,15 @@ class FirebaseAuthManager(private val context: Context) {
                 .addCredentialOption(googleIdOption)
                 .build()
 
+            var unwrappedContext = activityContext
+            while (unwrappedContext is android.content.ContextWrapper) {
+                if (unwrappedContext is android.app.Activity) break
+                unwrappedContext = unwrappedContext.baseContext
+            }
+
             val result = credentialManager.getCredential(
                 request = request,
-                context = activityContext
+                context = unwrappedContext
             )
 
             val credential = result.credential
@@ -105,23 +114,23 @@ class FirebaseAuthManager(private val context: Context) {
                 val idToken = googleIdTokenCredential.idToken
 
                 val firebaseCredential = GoogleAuthProvider.getCredential(idToken, null)
-                val authResult = auth.signInWithCredential(firebaseCredential).await()
+                val authResult = withContext(Dispatchers.IO) { auth.signInWithCredential(firebaseCredential).await() }
                 val user = authResult.user
 
                 if (user != null) {
                     _currentUser.value = user
                     _authState.value = AuthState.Success(user)
                     Log.d(tag, "Google Sign-In successful for user: ${user.email} (${user.uid})")
-                    return@withContext Result.success(user)
+                    Result.success(user)
                 } else {
                     val error = Exception("Firebase authentication returned empty user")
                     _authState.value = AuthState.Error(error.message ?: "Authentication failed")
-                    return@withContext Result.failure(error)
+                    Result.failure(error)
                 }
             } else {
                 val error = Exception("Unexpected credential type: ${credential.type}")
                 _authState.value = AuthState.Error(error.message ?: "Invalid credential type")
-                return@withContext Result.failure(error)
+                Result.failure(error)
             }
         } catch (e: GetCredentialException) {
             Log.w(tag, "Credential Manager Google Sign-In error: ${e.message}")

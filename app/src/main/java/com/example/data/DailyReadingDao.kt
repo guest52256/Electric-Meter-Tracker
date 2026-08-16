@@ -61,4 +61,7 @@ interface DailyReadingDao {
 
     @Query("DELETE FROM daily_readings WHERE meterId = :meterId")
     suspend fun deleteReadingsForMeter(meterId: Long)
+
+    @Query("DELETE FROM daily_readings")
+    suspend fun deleteAllReadings()
 }

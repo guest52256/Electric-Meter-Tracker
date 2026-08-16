@@ -16,6 +16,7 @@ import com.example.model.MeterBillingCycle
 import com.example.ui.theme.AppColorPalette
 import com.example.ui.theme.AppThemeMode
 import com.example.ui.theme.ThemePreferences
+import com.example.ui.navigation.Screen
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -104,14 +105,17 @@ class MeterViewModel(
     val authManager: com.example.data.firebase.FirebaseAuthManager = repository.firestoreSyncManager.authManager
     val currentUser = authManager.currentUser
     val authState = authManager.authState
+    val selectedNavigationScreen = MutableStateFlow<Screen>(Screen.DASHBOARD)
 
     fun signInWithGoogle(activityContext: Context) {
         viewModelScope.launch {
+            // Clear local DB to ensure new user starts clean or old user pulls fresh from cloud
+            repository.clearLocalDatabase()
             val result = authManager.signInWithGoogle(activityContext)
             if (result.isSuccess) {
                 android.widget.Toast.makeText(activityContext, "Signed in successfully", android.widget.Toast.LENGTH_SHORT).show()
-                // Immediately trigger full cloud sync with newly authenticated token
-                repository.firestoreSyncManager.forcePushAllData()
+                // Pull/Push full sync with newly authenticated token
+                repository.firestoreSyncManager.performFullSync()
             } else {
                 android.widget.Toast.makeText(activityContext, "Sign in failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
             }
@@ -120,10 +124,11 @@ class MeterViewModel(
 
     fun signInAnonymously(context: Context) {
         viewModelScope.launch {
+            repository.clearLocalDatabase()
             val result = authManager.signInAnonymously()
             if (result.isSuccess) {
                 android.widget.Toast.makeText(context, "Continuing as Guest", android.widget.Toast.LENGTH_SHORT).show()
-                repository.firestoreSyncManager.forcePushAllData()
+                repository.firestoreSyncManager.performFullSync()
             } else {
                 android.widget.Toast.makeText(context, "Guest sign in failed: ${result.exceptionOrNull()?.message}", android.widget.Toast.LENGTH_LONG).show()
             }
@@ -131,8 +136,11 @@ class MeterViewModel(
     }
 
     fun signOut(context: Context) {
-        authManager.signOut()
-        android.widget.Toast.makeText(context, "Signed out", android.widget.Toast.LENGTH_SHORT).show()
+        viewModelScope.launch {
+            repository.clearLocalDatabase()
+            authManager.signOut()
+            android.widget.Toast.makeText(context, "Signed out", android.widget.Toast.LENGTH_SHORT).show()
+        }
     }
 
     fun forcePushAllData(context: Context) {

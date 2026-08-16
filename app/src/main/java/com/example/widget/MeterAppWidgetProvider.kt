@@ -51,10 +51,11 @@ class MeterAppWidgetProvider : AppWidgetProvider() {
             appWidgetManager: AppWidgetManager,
             appWidgetIds: IntArray
         ) {
+            val appContext = context.applicationContext
             val scope = CoroutineScope(Dispatchers.IO)
             scope.launch {
                 try {
-                    val db = AppDatabase.getDatabase(context)
+                    val db = AppDatabase.getDatabase(appContext)
                     val meters = db.meterDao().getMeterById(1L) ?: db.meterDao().getMeterByName("Muhammad Iqbal S/O Luqman")
                     val activeMeters = if (meters != null) listOf(meters) else emptyList()
 
@@ -77,7 +78,7 @@ class MeterAppWidgetProvider : AppWidgetProvider() {
 
                     withContext(Dispatchers.Main) {
                         for (widgetId in appWidgetIds) {
-                            val views = RemoteViews(context.packageName, R.layout.widget_meter_summary)
+                            val views = RemoteViews(appContext.packageName, R.layout.widget_meter_summary)
 
                             // Title & Header
                             views.setTextViewText(R.id.widget_meter_name, meterName)
@@ -132,11 +133,11 @@ class MeterAppWidgetProvider : AppWidgetProvider() {
                             }
 
                             // Click Intent to launch MainActivity
-                            val clickIntent = Intent(context, MainActivity::class.java).apply {
+                            val clickIntent = Intent(appContext, MainActivity::class.java).apply {
                                 flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
                             }
                             val pendingIntent = PendingIntent.getActivity(
-                                context,
+                                appContext,
                                 widgetId,
                                 clickIntent,
                                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE

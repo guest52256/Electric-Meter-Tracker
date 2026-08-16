@@ -7,6 +7,7 @@ import com.example.model.Meter
 import com.example.model.MeterBillingCycle
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.firstOrNull
 import kotlinx.coroutines.launch
@@ -419,5 +420,14 @@ class MeterRepository(
 
     suspend fun syncWithCloud(): Result<Unit> {
         return firestoreSyncManager.performFullSync()
+    }
+
+    suspend fun clearLocalDatabase() {
+        withContext(Dispatchers.IO) {
+            meterDao.deleteAllMeters()
+            billingCycleDao.deleteAllBillingCycles()
+            dailyReadingDao.deleteAllReadings()
+            syncQueueDao.clearAll()
+        }
     }
 }

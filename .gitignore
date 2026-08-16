@@ -9,9 +9,7 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 .DS_Store
-/captures
 .externalNativeBuild
 .cxx
 local.properties
-.env
-debug.keystore
+

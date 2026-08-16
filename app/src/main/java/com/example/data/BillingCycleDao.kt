@@ -36,4 +36,7 @@ interface BillingCycleDao {
 
     @Query("DELETE FROM meter_billing_cycles WHERE meterId = :meterId")
     suspend fun deleteBillingCycleForMeter(meterId: Long)
+
+    @Query("DELETE FROM meter_billing_cycles")
+    suspend fun deleteAllBillingCycles()
 }

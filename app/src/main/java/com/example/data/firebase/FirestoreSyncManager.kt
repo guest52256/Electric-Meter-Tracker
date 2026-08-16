@@ -215,6 +215,7 @@ class FirestoreSyncManager(
      * Real-time listeners for meters, billingCycles, dailyReadings collections
      */
     private fun startRealtimeListeners() {
+        val userId = authManager.getUserId() ?: return
         val db = firestore ?: return
         val mDao = meterDao ?: return
         val bDao = billingCycleDao ?: return
@@ -223,7 +224,7 @@ class FirestoreSyncManager(
         // 1. Collection 'meters'
         try {
             metersListener?.remove()
-            metersListener = db.collection("meters").addSnapshotListener { snapshot, error ->
+            metersListener = db.collection("users/$userId/meters").addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(tag, "Meters listener error: ${error.message}")
                     return@addSnapshotListener
@@ -275,7 +276,7 @@ class FirestoreSyncManager(
         // 2. Collection 'billingCycles'
         try {
             cyclesListener?.remove()
-            cyclesListener = db.collection("billingCycles").addSnapshotListener { snapshot, error ->
+            cyclesListener = db.collection("users/$userId/billingCycles").addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(tag, "Billing cycles listener error: ${error.message}")
                     return@addSnapshotListener
@@ -328,7 +329,7 @@ class FirestoreSyncManager(
         // 3. Collection 'dailyReadings'
         try {
             readingsListener?.remove()
-            readingsListener = db.collection("dailyReadings").addSnapshotListener { snapshot, error ->
+            readingsListener = db.collection("users/$userId/dailyReadings").addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     Log.w(tag, "Daily readings listener error: ${error.message}")
                     return@addSnapshotListener
@@ -437,6 +438,7 @@ class FirestoreSyncManager(
      * Push a meter to Firestore
      */
     suspend fun pushMeter(meter: Meter) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val mDao = meterDao
         val qDao = syncQueueDao
@@ -459,7 +461,7 @@ class FirestoreSyncManager(
         // 1. Direct REST write with Auth token
         try {
             val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("meters", docId, meterMap, idToken)
+            val restResult = restApi.putDocument("users/$userId/meters", docId, meterMap, idToken)
             if (restResult.isSuccess) {
                 pushedSuccessfully = true
             }
@@ -470,7 +472,7 @@ class FirestoreSyncManager(
         // 2. Native SDK write
         if (db != null) {
             try {
-                val task = db.collection("meters").document(docId).set(meterMap, SetOptions.merge())
+                val task = db.collection("users/$userId/meters").document(docId).set(meterMap, SetOptions.merge())
                 awaitTaskWithTimeout(task, 3000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
@@ -488,7 +490,7 @@ class FirestoreSyncManager(
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
-                    collection = "meters",
+                    collection = "users/$userId/meters",
                     documentId = docId,
                     operationType = "INSERT",
                     payloadJson = meter.name
@@ -501,6 +503,7 @@ class FirestoreSyncManager(
      * Push a billing cycle to Firestore
      */
     suspend fun pushBillingCycle(cycle: MeterBillingCycle) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val bDao = billingCycleDao
         val qDao = syncQueueDao
@@ -524,7 +527,7 @@ class FirestoreSyncManager(
         // 1. Direct REST write with Auth token
         try {
             val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("billingCycles", docId, cycleMap, idToken)
+            val restResult = restApi.putDocument("users/$userId/billingCycles", docId, cycleMap, idToken)
             if (restResult.isSuccess) {
                 pushedSuccessfully = true
             }
@@ -535,7 +538,7 @@ class FirestoreSyncManager(
         // 2. Native SDK write
         if (db != null) {
             try {
-                val task = db.collection("billingCycles").document(docId).set(cycleMap, SetOptions.merge())
+                val task = db.collection("users/$userId/billingCycles").document(docId).set(cycleMap, SetOptions.merge())
                 awaitTaskWithTimeout(task, 3000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
@@ -553,7 +556,7 @@ class FirestoreSyncManager(
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
-                    collection = "billingCycles",
+                    collection = "users/$userId/billingCycles",
                     documentId = docId,
                     operationType = "INSERT",
                     payloadJson = cycle.previousBillReading.toString()
@@ -566,6 +569,7 @@ class FirestoreSyncManager(
      * Push a daily reading to Firestore
      */
     suspend fun pushReading(reading: DailyReading) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val dDao = dailyReadingDao
         val qDao = syncQueueDao
@@ -596,7 +600,7 @@ class FirestoreSyncManager(
         // 1. Direct REST write with Auth token
         try {
             val idToken = authManager.getIdToken()
-            val restResult = restApi.putDocument("dailyReadings", docId, readingMap, idToken)
+            val restResult = restApi.putDocument("users/$userId/dailyReadings", docId, readingMap, idToken)
             if (restResult.isSuccess) {
                 pushedSuccessfully = true
             }
@@ -607,7 +611,7 @@ class FirestoreSyncManager(
         // 2. Native SDK write
         if (db != null) {
             try {
-                val task = db.collection("dailyReadings").document(docId).set(readingMap, SetOptions.merge())
+                val task = db.collection("users/$userId/dailyReadings").document(docId).set(readingMap, SetOptions.merge())
                 awaitTaskWithTimeout(task, 3000L)
                 pushedSuccessfully = true
             } catch (e: Exception) {
@@ -625,7 +629,7 @@ class FirestoreSyncManager(
             qDao?.insertOperation(
                 SyncQueueItem(
                     operationId = docId,
-                    collection = "dailyReadings",
+                    collection = "users/$userId/dailyReadings",
                     documentId = docId,
                     operationType = "INSERT",
                     payloadJson = "${reading.currentReading}"
@@ -638,20 +642,21 @@ class FirestoreSyncManager(
      * Delete a reading from Firestore
      */
     suspend fun deleteReading(reading: DailyReading) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val docId = getReadingDocId(reading.meterId, reading.dateString)
         val qDao = syncQueueDao
 
         try {
             val idToken = authManager.getIdToken()
-            restApi.deleteDocument("dailyReadings", docId, idToken)
+            restApi.deleteDocument("users/$userId/dailyReadings", docId, idToken)
         } catch (e: Exception) {
             Log.w(tag, "REST delete reading notice: ${e.message}")
         }
 
         if (db != null) {
             try {
-                val task = db.collection("dailyReadings").document(docId).delete()
+                val task = db.collection("users/$userId/dailyReadings").document(docId).delete()
                 awaitTaskWithTimeout(task, 3000L)
             } catch (e: Exception) {
                 Log.w(tag, "deleteReading SDK note: ${e.message}")
@@ -665,20 +670,21 @@ class FirestoreSyncManager(
      * Delete a meter from Firestore
      */
     suspend fun deleteMeter(meterId: Long) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val docId = getMeterDocId(meterId)
         val qDao = syncQueueDao
 
         try {
             val idToken = authManager.getIdToken()
-            restApi.deleteDocument("meters", docId, idToken)
+            restApi.deleteDocument("users/$userId/meters", docId, idToken)
         } catch (e: Exception) {
             Log.w(tag, "REST delete meter notice: ${e.message}")
         }
 
         if (db != null) {
             try {
-                val task = db.collection("meters").document(docId).delete()
+                val task = db.collection("users/$userId/meters").document(docId).delete()
                 awaitTaskWithTimeout(task, 3000L)
             } catch (e: Exception) {
                 Log.w(tag, "deleteMeter SDK note: ${e.message}")
@@ -692,20 +698,21 @@ class FirestoreSyncManager(
      * Delete a billing cycle from Firestore
      */
     suspend fun deleteBillingCycle(meterId: Long) = withContext(Dispatchers.IO) {
+        val userId = authManager.getUserId() ?: return@withContext
         val db = firestore
         val docId = getCycleDocId(meterId)
         val qDao = syncQueueDao
 
         try {
             val idToken = authManager.getIdToken()
-            restApi.deleteDocument("billingCycles", docId, idToken)
+            restApi.deleteDocument("users/$userId/billingCycles", docId, idToken)
         } catch (e: Exception) {
             Log.w(tag, "REST delete cycle notice: ${e.message}")
         }
 
         if (db != null) {
             try {
-                val task = db.collection("billingCycles").document(docId).delete()
+                val task = db.collection("users/$userId/billingCycles").document(docId).delete()
                 awaitTaskWithTimeout(task, 3000L)
             } catch (e: Exception) {
                 Log.w(tag, "deleteBillingCycle SDK note: ${e.message}")
@@ -736,6 +743,15 @@ class FirestoreSyncManager(
             return@withContext Result.failure(IllegalStateException("Device is offline"))
         }
 
+        val userId = authManager.getUserId() ?: run {
+            _syncStatus.value = _syncStatus.value.copy(
+                state = SyncState.ERROR,
+                isSyncing = false,
+                errorMessage = "Not signed in"
+            )
+            return@withContext Result.failure(IllegalStateException("Not signed in"))
+        }
+
         _syncStatus.value = _syncStatus.value.copy(
             state = SyncState.SYNCING,
             isSyncing = true,
@@ -764,7 +780,7 @@ class FirestoreSyncManager(
 
             // 4. Pull remote snapshots safely with timeout
             try {
-                val metersSnap = awaitTaskWithTimeout(db.collection("meters").get(), 4000L)
+                val metersSnap = awaitTaskWithTimeout(db.collection("users/$userId/meters").get(), 4000L)
                 if (metersSnap != null) {
                     for (doc in metersSnap.documents) {
                         val id = doc.getLong("id") ?: doc.id.removePrefix("meter_").toLongOrNull() ?: continue
@@ -794,7 +810,7 @@ class FirestoreSyncManager(
                     }
                 }
 
-                val readingsSnap = awaitTaskWithTimeout(db.collection("dailyReadings").get(), 4000L)
+                val readingsSnap = awaitTaskWithTimeout(db.collection("users/$userId/dailyReadings").get(), 4000L)
                 if (readingsSnap != null) {
                     for (doc in readingsSnap.documents) {
                         val id = doc.getLong("id") ?: doc.id.removePrefix("reading_").toLongOrNull() ?: continue
@@ -853,7 +869,7 @@ class FirestoreSyncManager(
                     "deviceId" to deviceId,
                     "version" to 1L
                 )
-                db.collection("appSettings").document("global_config").set(settingsMap, SetOptions.merge())
+                db.collection("users/$userId/appSettings").document("global_config").set(settingsMap, SetOptions.merge())
             } catch (e: Exception) {
                 Log.w(tag, "Settings sync error: ${e.message}")
             }

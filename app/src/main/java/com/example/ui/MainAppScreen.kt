@@ -84,7 +84,13 @@ fun MainAppScreen(
     val context = LocalContext.current
     var showSplashScreen by rememberSaveable { mutableStateOf(true) }
     var showAuthScreen by rememberSaveable { mutableStateOf(true) }
-    var currentScreen by remember { mutableStateOf(Screen.DASHBOARD) }
+    val selectedScreen by viewModel.selectedNavigationScreen.collectAsStateWithLifecycle()
+    var currentScreen by remember { mutableStateOf(selectedScreen) }
+    LaunchedEffect(selectedScreen) {
+        if (currentScreen != selectedScreen) {
+            currentScreen = selectedScreen
+        }
+    }
     val dashboardOverview by viewModel.dashboardOverview.collectAsStateWithLifecycle()
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
 
@@ -152,6 +158,8 @@ fun MainAppScreen(
         )
     }
 
+    var showProfileDialog by remember { mutableStateOf(false) }
+
     // 1. Show Splash Screen on initial launch
     if (showSplashScreen) {
         SplashScreen(
@@ -167,6 +175,18 @@ fun MainAppScreen(
             onContinue = { showAuthScreen = false }
         )
         return
+    }
+    
+    if (showProfileDialog) {
+        com.example.ui.components.ProfileDialog(
+            viewModel = viewModel,
+            onDismiss = { showProfileDialog = false },
+            onSignOut = { 
+                viewModel.signOut(context)
+                showProfileDialog = false
+                showAuthScreen = true
+            }
+        )
     }
 
     Scaffold(
@@ -188,7 +208,13 @@ fun MainAppScreen(
                     
                     // Account / Sign-In button
                     IconButton(
-                        onClick = { showAuthScreen = true },
+                        onClick = { 
+                            if (currentUser != null) {
+                                showProfileDialog = true
+                            } else {
+                                showAuthScreen = true
+                            }
+                        },
                         modifier = Modifier.testTag("top_bar_account_button")
                     ) {
                         Box(
@@ -295,7 +321,10 @@ fun MainAppScreen(
 
                     NavigationBarItem(
                         selected = isSelected,
-                        onClick = { currentScreen = screen },
+                        onClick = {
+                            currentScreen = screen
+                            viewModel.selectedNavigationScreen.value = screen
+                        },
                         icon = {
                             if (screen == Screen.DASHBOARD && dashboardOverview.totalAlertsCount > 0) {
                                 BadgedBox(

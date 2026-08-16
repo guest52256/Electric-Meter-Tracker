@@ -45,9 +45,12 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
+import kotlinx.coroutines.launch
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -79,11 +82,12 @@ fun GoogleSignInScreen(
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
 
     val scrollState = rememberScrollState()
+    val scope = rememberCoroutineScope()
 
     // Auto-proceed if already signed in
     LaunchedEffect(currentUser) {
         if (currentUser != null) {
-            // Give user a moment to see logged-in state or proceed
+            onContinue()
         }
     }
 
@@ -281,7 +285,7 @@ fun GoogleSignInScreen(
                             horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
                             OutlinedButton(
-                                onClick = { viewModel.signOut(context) },
+                                onClick = { viewModel.authManager.signOut() },
                                 shape = RoundedCornerShape(10.dp),
                                 modifier = Modifier.weight(1f)
                             ) {
@@ -510,11 +514,8 @@ fun GoogleSignInScreen(
                     }
 
                     // Fallback Anonymous / Guest auth button
-                    OutlinedButton(
-                        onClick = {
-                            viewModel.signInAnonymously(context)
-                            onContinue()
-                        },
+                    TextButton(
+                        onClick = { scope.launch { viewModel.authManager.signInAnonymously() } },
                         shape = RoundedCornerShape(12.dp),
                         modifier = Modifier
                             .fillMaxWidth()
