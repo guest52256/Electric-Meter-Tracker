@@ -150,7 +150,7 @@ fun HistoryScreen(
                 IconButton(
                     onClick = {
                         context.findActivity()?.let { activity ->
-                            AdManager.showInterstitialAd(activity) {
+                            AdManager.handleAction(activity, "history_actions") {
                                 showExportBackupDialog = true
                             }
                         } ?: run { showExportBackupDialog = true }
@@ -167,7 +167,7 @@ fun HistoryScreen(
                 IconButton(
                     onClick = {
                         context.findActivity()?.let { activity ->
-                            AdManager.showInterstitialAd(activity) {
+                            AdManager.handleAction(activity, "history_actions") {
                                 val csv = viewModel.generateCsvExport(filteredReadings)
                                 val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
                                 val clip = ClipData.newPlainText("Meter Readings CSV", csv)
@@ -194,7 +194,7 @@ fun HistoryScreen(
                 IconButton(
                     onClick = {
                         context.findActivity()?.let { activity ->
-                            AdManager.showInterstitialAd(activity) {
+                            AdManager.handleAction(activity, "history_actions") {
                                 val summary = viewModel.generateTextSummary(filteredReadings)
                                 val sendIntent: Intent = Intent().apply {
                                     action = Intent.ACTION_SEND
@@ -344,7 +344,10 @@ fun HistoryScreen(
             }
         }
         
-        BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+        BannerAdView(
+            modifier = Modifier.padding(top = 12.dp, bottom = 80.dp),
+            bannerId = "banner_history"
+        )
     }
 
     // Edit Reading Dialog

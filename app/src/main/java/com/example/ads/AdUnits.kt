@@ -18,7 +18,7 @@ object AdUnits {
      * Set this to FALSE when deploying the application to production with real AdMob ads.
      * When TRUE, official Google test ad unit IDs will be used to prevent policy violations.
      */
-    const val USE_TEST_ADS = true
+    const val USE_TEST_ADS = false
 
     // =========================================================================================
     // 1. GOOGLE OFFICIAL TEST AD UNIT IDS (Safe for development & testing)
@@ -30,9 +30,9 @@ object AdUnits {
     // =========================================================================================
     // 2. PRODUCTION AD UNIT IDS (Put your original AdMob Ad Unit IDs here)
     // =========================================================================================
-    private const val PROD_BANNER_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY"
-    private const val PROD_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY"
-    private const val PROD_REWARDED_AD_UNIT_ID = "ca-app-pub-XXXXXXXXXXXXXXXX/YYYYYYYYYY"
+    private const val PROD_BANNER_AD_UNIT_ID = "ca-app-pub-3950731807963252/6891016409"
+    private const val PROD_INTERSTITIAL_AD_UNIT_ID = "ca-app-pub-3950731807963252/5589492691"
+    private const val PROD_REWARDED_AD_UNIT_ID = "ca-app-pub-3950731807963252/6108367443"
 
     // =========================================================================================
     // RESOLVED AD UNIT GETTERS (Automatically selects Test or Production based on USE_TEST_ADS)

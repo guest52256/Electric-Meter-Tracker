@@ -31,9 +31,14 @@ class MeterRepository(
     val allReadings: Flow<List<DailyReading>> = dailyReadingDao.getAllReadings()
     val alertReadings: Flow<List<DailyReading>> = dailyReadingDao.getAlertReadings()
     val unitThreshold: Flow<Double> = firestoreSyncManager.appSettingsPreferences.unitThreshold
+    val adminModeEnabled: Flow<Boolean> = firestoreSyncManager.appSettingsPreferences.adminModeEnabled
 
     fun updateUnitThreshold(threshold: Double) {
         firestoreSyncManager.updateAndSyncUnitThreshold(threshold)
+    }
+
+    fun updateAdminModeEnabled(enabled: Boolean) {
+        firestoreSyncManager.appSettingsPreferences.setAdminModeEnabled(enabled)
     }
 
     init {

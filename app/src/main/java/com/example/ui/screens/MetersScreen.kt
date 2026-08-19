@@ -275,7 +275,10 @@ fun MetersScreen(
             }
             
             item {
-                BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+                BannerAdView(
+                    modifier = Modifier.padding(top = 12.dp, bottom = 80.dp),
+                    bannerId = "banner_meters"
+                )
             }
         }
 
@@ -376,14 +379,10 @@ fun MetersScreen(
                 Button(
                     onClick = {
                         viewModel.saveNewMeter {
-                            // On successful meter save, show rewarded video ad
+                            // On successful meter save, show instant Toast and handle centralized ad action
+                            android.widget.Toast.makeText(context, "Meter Saved Successfully!", android.widget.Toast.LENGTH_SHORT).show()
                             context.findActivity()?.let { activity ->
-                                AdManager.showRewardedAd(
-                                    activity = activity,
-                                    ignoreExemption = false,
-                                    onUserEarnedReward = { _, _ -> },
-                                    onAdClosed = { }
-                                )
+                                AdManager.handleAction(activity, "save_meter")
                             }
                         }
                     },

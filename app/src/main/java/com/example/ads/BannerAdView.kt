@@ -16,24 +16,30 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import com.google.android.gms.ads.AdListener
 import com.google.android.gms.ads.AdRequest
 import com.google.android.gms.ads.AdSize
 import com.google.android.gms.ads.AdView
-import com.google.android.gms.ads.LoadAdError
 
 /**
  * Jetpack Compose Composable for displaying an AdMob Banner Ad.
+ * Respects dynamic admin switches and unit ID overrides.
  */
 @Composable
 fun BannerAdView(
     modifier: Modifier = Modifier,
+    bannerId: String = "banner_general",
     adSize: AdSize = AdSize.BANNER
 ) {
     val isInPreview = LocalInspectionMode.current
     val context = LocalContext.current
+
+    val showBanner = remember { AdManager.shouldShowBannerAdForScreen(context, bannerId) }
+    if (!showBanner) {
+        // Return an empty box that takes no space if banners are disabled by Admin
+        return
+    }
 
     if (isInPreview) {
         // Preview placeholder in Studio / Tools
@@ -46,7 +52,7 @@ fun BannerAdView(
             contentAlignment = Alignment.Center
         ) {
             Text(
-                text = "AdMob Banner Ad Preview",
+                text = "AdMob Banner Ad Preview ($bannerId)",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
@@ -57,7 +63,7 @@ fun BannerAdView(
     val adView = remember {
         AdView(context).apply {
             setAdSize(adSize)
-            adUnitId = AdUnits.BANNER_AD_UNIT_ID
+            adUnitId = AdManager.getResolvedBannerAdUnitId()
             adListener = object : AdListener() {
                 override fun onAdImpression() {
                     super.onAdImpression()
@@ -66,8 +72,16 @@ fun BannerAdView(
 
                 override fun onAdLoaded() {
                     super.onAdLoaded()
-                    // If impression callback isn't fired by SDK in test mode, log upon load
                     AdAnalyticsTracker.logAdImpression(context, "BANNER")
+                }
+
+                override fun onAdClicked() {
+                    super.onAdClicked()
+                    AdAnalyticsTracker.logAdImpression(context, "BANNER_CLICK")
+                    context.findActivity()?.let { activity ->
+                        val clickActionKey = "click_$bannerId"
+                        AdManager.handleAction(activity, clickActionKey)
+                    }
                 }
             }
             loadAd(AdRequest.Builder().build())

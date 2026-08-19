@@ -2,6 +2,7 @@ package com.example.ui.components
 
 import android.app.Activity
 import android.widget.Toast
+import com.example.ads.findActivity
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -300,7 +301,7 @@ fun AboutDeveloperDialog(
                 // Optional Rewarded Video Ad to support app
                 OutlinedButton(
                     onClick = {
-                        (context as? Activity)?.let { activity ->
+                        context.findActivity()?.let { activity ->
                             AdManager.showRewardedAd(
                                 activity = activity,
                                 onUserEarnedReward = { amount, type ->

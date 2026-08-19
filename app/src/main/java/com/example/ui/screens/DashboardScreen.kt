@@ -303,7 +303,10 @@ fun DashboardScreen(
 
             // Always display Banner Ad cleanly at the bottom
             item {
-                BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+                BannerAdView(
+                    modifier = Modifier.padding(top = 12.dp, bottom = 80.dp),
+                    bannerId = "banner_dashboard"
+                )
             }
         }
 

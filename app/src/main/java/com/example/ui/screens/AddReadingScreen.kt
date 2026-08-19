@@ -630,14 +630,10 @@ fun AddReadingScreen(
                     Button(
                         onClick = {
                             viewModel.submitDailyReading {
-                                // On successful reading save, show rewarded video ad
+                                // On successful reading save, show instant confirmation and handle centralized ad action
+                                android.widget.Toast.makeText(context, "Reading Saved Successfully!", android.widget.Toast.LENGTH_SHORT).show()
                                 context.findActivity()?.let { activity ->
-                                    AdManager.showRewardedAd(
-                                        activity = activity,
-                                        ignoreExemption = false,
-                                        onUserEarnedReward = { _, _ -> },
-                                        onAdClosed = { }
-                                    )
+                                    AdManager.handleAction(activity, "add_reading")
                                 }
                             }
                         },
@@ -670,7 +666,10 @@ fun AddReadingScreen(
             }
 
             Spacer(modifier = Modifier.height(12.dp))
-            BannerAdView(modifier = Modifier.padding(bottom = 80.dp))
+            BannerAdView(
+                modifier = Modifier.padding(bottom = 80.dp),
+                bannerId = "banner_add_reading"
+            )
         }
     }
 }

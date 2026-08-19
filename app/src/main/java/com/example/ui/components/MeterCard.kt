@@ -84,7 +84,7 @@ fun MeterDashboardCard(
         "%.1f".format(state.previousBillReading)
     }
 
-    val progressFraction = (state.unitsSinceBill / 100.0).coerceIn(0.0, 1.0).toFloat()
+    val progressFraction = (state.unitsSinceBill / state.alertThreshold).coerceIn(0.0, 1.0).toFloat()
 
     Card(
         modifier = modifier
@@ -165,7 +165,7 @@ fun MeterDashboardCard(
                         )
                         Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = if (isAlert) "🔴 100+ ALERT" else "🟢 NORMAL",
+                            text = if (isAlert) "🔴 ${state.alertThreshold.toInt()}+ ALERT" else "🟢 NORMAL",
                             style = MaterialTheme.typography.labelSmall.copy(
                                 fontWeight = FontWeight.Black,
                                 fontSize = 11.sp
@@ -232,7 +232,7 @@ fun MeterDashboardCard(
                             color = if (isAlert) AlertRedBorder else EnergyCyan
                         )
                         Text(
-                            text = if (isAlert) ">= 100 Units" else "${100 - state.unitsSinceBill.toInt()} to 100",
+                            text = if (isAlert) ">= ${state.alertThreshold.toInt()} Units" else "${(state.alertThreshold - state.unitsSinceBill).toInt().coerceAtLeast(0)} to ${state.alertThreshold.toInt()}",
                             style = MaterialTheme.typography.bodySmall,
                             color = Color.White.copy(alpha = 0.85f)
                         )
@@ -249,12 +249,12 @@ fun MeterDashboardCard(
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
                     Text(
-                        text = "Cycle Usage Progress (Limit: 100)",
+                        text = "Cycle Usage Progress (Limit: ${state.alertThreshold.toInt()})",
                         style = MaterialTheme.typography.labelSmall,
                         color = Slate600
                     )
                     Text(
-                        text = "${(state.unitsSinceBill).toInt()} / 100 Units",
+                        text = "${(state.unitsSinceBill).toInt()} / ${state.alertThreshold.toInt()} Units",
                         style = MaterialTheme.typography.labelSmall.copy(fontWeight = FontWeight.Bold),
                         color = if (isAlert) AlertRed else Slate800
                     )

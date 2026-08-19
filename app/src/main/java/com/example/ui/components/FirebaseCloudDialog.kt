@@ -191,7 +191,7 @@ fun FirebaseCloudDialog(
                                 OutlinedButton(
                                     onClick = {
                                         context.findActivity()?.let { activity ->
-                                            AdManager.showInterstitialAd(activity) {
+                                            AdManager.handleAction(activity, "profile_actions") {
                                                 viewModel.signOut(context)
                                             }
                                         } ?: viewModel.signOut(context)
@@ -206,7 +206,7 @@ fun FirebaseCloudDialog(
                                 Button(
                                     onClick = {
                                         context.findActivity()?.let { activity ->
-                                            AdManager.showInterstitialAd(activity) {
+                                            AdManager.handleAction(activity, "profile_actions") {
                                                 viewModel.signInWithGoogle(context)
                                             }
                                         } ?: viewModel.signInWithGoogle(context)
@@ -398,7 +398,7 @@ fun FirebaseCloudDialog(
                     Button(
                         onClick = {
                             context.findActivity()?.let { activity ->
-                                AdManager.showInterstitialAd(activity) {
+                                AdManager.handleAction(activity, "cloud_sync_actions") {
                                     viewModel.forcePushAllData(context)
                                 }
                             } ?: viewModel.forcePushAllData(context)
@@ -440,7 +440,7 @@ fun FirebaseCloudDialog(
                         OutlinedButton(
                             onClick = {
                                 context.findActivity()?.let { activity ->
-                                    AdManager.showInterstitialAd(activity) {
+                                    AdManager.handleAction(activity, "cloud_sync_actions") {
                                         viewModel.performCombinedSyncAndUpload(context)
                                     }
                                 } ?: viewModel.performCombinedSyncAndUpload(context)

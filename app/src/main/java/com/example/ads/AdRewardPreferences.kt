@@ -34,7 +34,8 @@ data class AdRewardState(
 class AdRewardPreferences(private val context: Context) {
 
     companion object {
-        const val REQUIRED_ADS_COUNT = 10
+        val REQUIRED_ADS_COUNT: Int
+            get() = AdManager.oneMonthMemberTargetAds
         private const val KEY_REMAINING_ADS = "remaining_ads_to_watch"
         private const val KEY_EXEMPT_UNTIL = "exempt_until_timestamp"
         private const val KEY_WATCHED_COUNT = "total_watched_this_cycle"

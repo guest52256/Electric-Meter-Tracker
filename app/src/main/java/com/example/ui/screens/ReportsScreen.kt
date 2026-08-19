@@ -418,7 +418,10 @@ fun ReportsScreen(
 
         // Anchored Banner Ad
         item {
-            BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+            BannerAdView(
+                modifier = Modifier.padding(top = 12.dp, bottom = 80.dp),
+                bannerId = "banner_reports"
+            )
         }
     }
 

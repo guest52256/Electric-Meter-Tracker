@@ -22,7 +22,7 @@
         <!-- Google AdMob Application ID (Replace with your production AdMob App ID in production) -->
         <meta-data
             android:name="com.google.android.gms.ads.APPLICATION_ID"
-            android:value="ca-app-pub-3940256099942544~3347511713" />
+            android:value="ca-app-pub-3950731807963252~4887066950" />
 
         <activity
             android:name=".MainActivity"

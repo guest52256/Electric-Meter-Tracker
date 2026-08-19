@@ -246,8 +246,15 @@ class MeterViewModel(
     val unitThreshold: StateFlow<Double> = repository.unitThreshold
         .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), 100.0)
 
+    val adminModeEnabled: StateFlow<Boolean> = repository.adminModeEnabled
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), false)
+
     fun updateUnitThreshold(threshold: Double) {
         repository.updateUnitThreshold(threshold)
+    }
+
+    fun updateAdminModeEnabled(enabled: Boolean) {
+        repository.updateAdminModeEnabled(enabled)
     }
 
     // ----------------------------------------------------

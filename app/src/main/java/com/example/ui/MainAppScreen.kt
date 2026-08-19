@@ -30,6 +30,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.material.icons.filled.AdminPanelSettings
+import androidx.compose.material.icons.outlined.AdminPanelSettings
 import androidx.compose.material.icons.filled.CloudDone
 import androidx.compose.material.icons.filled.CloudOff
 import androidx.compose.material.icons.filled.CloudSync
@@ -78,12 +80,15 @@ import com.example.ui.components.FirebaseCloudDialog
 import com.example.ui.components.ThemeSelectorDialog
 import com.example.ui.navigation.Screen
 import com.example.ui.screens.AddReadingScreen
+import com.example.ui.screens.AdminPanelScreen
 import com.example.ui.screens.BillCycleScreen
 import com.example.ui.screens.DashboardScreen
 import com.example.ui.screens.HistoryScreen
 import com.example.ui.screens.MetersScreen
 import com.example.ui.screens.ReportsScreen
 import com.example.ui.screens.SplashScreen
+import com.example.ads.AdManager
+import com.example.ads.findActivity
 import com.example.ui.theme.AlertRed
 import com.example.ui.theme.ElectricBlue
 import com.example.ui.theme.SuccessGreen
@@ -96,7 +101,7 @@ fun MainAppScreen(
     modifier: Modifier = Modifier
 ) {
     val context = LocalContext.current
-    var showSplashScreen by rememberSaveable { mutableStateOf(true) }
+    var showSplashScreen by rememberSaveable { mutableStateOf(!AdManager.hasShownSplash) }
     var showAuthScreen by rememberSaveable { mutableStateOf(!viewModel.authManager.isUserSignedIn()) }
     val currentUser by viewModel.currentUser.collectAsStateWithLifecycle()
     LaunchedEffect(currentUser) {
@@ -115,6 +120,7 @@ fun MainAppScreen(
     val syncStatus by viewModel.syncStatus.collectAsStateWithLifecycle()
     val autoSyncCountdown by viewModel.autoSyncCountdown.collectAsStateWithLifecycle()
     val autoSyncActivityName by viewModel.autoSyncActivityName.collectAsStateWithLifecycle()
+    val adminModeEnabled by viewModel.adminModeEnabled.collectAsStateWithLifecycle()
 
     // Request Notification permission on Android 13+
     val permissionLauncher = rememberLauncherForActivityResult(
@@ -187,6 +193,7 @@ fun MainAppScreen(
         SplashScreen(
             onSplashFinished = {
                 showSplashScreen = false
+                AdManager.hasShownSplash = true
                 if (!viewModel.authManager.isUserSignedInWithGoogle()) {
                     viewModel.authManager.setGuestMode(context)
                     android.widget.Toast.makeText(context, "Continue as Guest", android.widget.Toast.LENGTH_SHORT).show()
@@ -316,6 +323,40 @@ fun MainAppScreen(
                         }
                     }
 
+                    // Admin Mode Toggle Button
+                    if (currentUser?.email?.lowercase() == "techsadaqat@gmail.com") {
+                        IconButton(
+                            onClick = { 
+                                val nextVal = !adminModeEnabled
+                                viewModel.updateAdminModeEnabled(nextVal)
+                                if (!nextVal && currentScreen == Screen.ADMIN) {
+                                    currentScreen = Screen.DASHBOARD
+                                    viewModel.selectedNavigationScreen.value = Screen.DASHBOARD
+                                }
+                                android.widget.Toast.makeText(context, if (nextVal) "Admin Mode Activated" else "Admin Mode Deactivated", android.widget.Toast.LENGTH_SHORT).show()
+                            },
+                            modifier = Modifier.testTag("top_bar_admin_toggle_button")
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                                    .background(
+                                        if (adminModeEnabled) MaterialTheme.colorScheme.primaryContainer 
+                                        else MaterialTheme.colorScheme.surfaceVariant
+                                    ),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (adminModeEnabled) Icons.Filled.AdminPanelSettings else Icons.Outlined.AdminPanelSettings,
+                                    contentDescription = "Toggle Admin Mode",
+                                    tint = if (adminModeEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.primary.copy(alpha = 0.5f),
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+                    }
+
                     // Firebase Cloud Sync button
                     IconButton(
                         onClick = { viewModel.openCloudDialog() },
@@ -349,13 +390,29 @@ fun MainAppScreen(
                     .testTag("main_navigation_bar")
             ) {
                 Screen.values().forEach { screen ->
+                    if (screen == Screen.ADMIN) {
+                        val isTechSadaqat = currentUser?.email?.lowercase() == "techsadaqat@gmail.com"
+                        if (!isTechSadaqat || !adminModeEnabled) {
+                            return@forEach
+                        }
+                    }
                     val isSelected = currentScreen == screen
 
                     NavigationBarItem(
                         selected = isSelected,
                         onClick = {
-                            currentScreen = screen
-                            viewModel.selectedNavigationScreen.value = screen
+                            if (!isSelected) {
+                                context.findActivity()?.let { activity ->
+                                    val tabActionKey = "tab_${screen.name.lowercase()}"
+                                    AdManager.handleAction(activity, tabActionKey) {
+                                        currentScreen = screen
+                                        viewModel.selectedNavigationScreen.value = screen
+                                    }
+                                } ?: run {
+                                    currentScreen = screen
+                                    viewModel.selectedNavigationScreen.value = screen
+                                }
+                            }
                         },
                         icon = {
                             if (screen == Screen.DASHBOARD && dashboardOverview.totalAlertsCount > 0) {
@@ -503,6 +560,9 @@ fun MainAppScreen(
                             viewModel = viewModel
                         )
                         Screen.REPORTS -> ReportsScreen(
+                            viewModel = viewModel
+                        )
+                        Screen.ADMIN -> AdminPanelScreen(
                             viewModel = viewModel
                         )
                     }

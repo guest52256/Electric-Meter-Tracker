@@ -462,9 +462,10 @@ fun BillCycleScreen(
                     Button(
                         onClick = {
                             viewModel.updateBillingCycle {
-                                // Cycle updated - show Interstitial Ad
+                                // Cycle updated - show instant Toast and handle centralized ad action
+                                android.widget.Toast.makeText(context, "Billing Cycle Saved Successfully!", android.widget.Toast.LENGTH_SHORT).show()
                                 context.findActivity()?.let { activity ->
-                                    AdManager.showInterstitialAd(activity)
+                                    AdManager.handleAction(activity, "save_bill_cycle")
                                 }
                             }
                         },
@@ -620,7 +621,10 @@ fun BillCycleScreen(
         }
 
         Spacer(modifier = Modifier.height(8.dp))
-        BannerAdView(modifier = Modifier.padding(top = 12.dp, bottom = 80.dp))
+        BannerAdView(
+            modifier = Modifier.padding(top = 12.dp, bottom = 80.dp),
+            bannerId = "banner_bill_cycle"
+        )
     }
 
     // Direct Edit Billing Cycle Dialog

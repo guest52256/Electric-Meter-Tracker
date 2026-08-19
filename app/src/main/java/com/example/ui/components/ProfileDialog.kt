@@ -191,7 +191,8 @@ fun ProfileDialog(
                 // ----------------------------------------------------
                 // 10 REWARD VIDEO ADS FOR 1 MONTH AD-FREE PASS
                 // ----------------------------------------------------
-                Card(
+                if (AdManager.oneMonthMemberEnabled) {
+                    Card(
                     colors = CardDefaults.cardColors(
                         containerColor = if (adRewardState.isMonthExemptActive) {
                             SuccessGreen.copy(alpha = 0.10f)
@@ -285,7 +286,7 @@ fun ProfileDialog(
                         } else {
                             // In-progress ad counter
                             Text(
-                                text = "Watch 10 short video ads to stop all Interstitial and Video Reward ads for 1 month! Only small banners will run.",
+                                text = "Watch ${AdManager.oneMonthMemberTargetAds} short video ads to stop all Interstitial and Video Reward ads for 1 month! Only small banners will run.",
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 textAlign = TextAlign.Start
@@ -340,7 +341,7 @@ fun ProfileDialog(
                                                 if (newState.isMonthExemptActive) {
                                                     Toast.makeText(
                                                         context,
-                                                        "🎉 Congratulations! You watched 10 ads. Video & interstitial ads are now disabled for 1 month until ${newState.exemptUntilFormattedDate}!",
+                                                        "🎉 Congratulations! You watched ${AdManager.oneMonthMemberTargetAds} ads. Video & interstitial ads are now disabled for 1 month until ${newState.exemptUntilFormattedDate}!",
                                                         Toast.LENGTH_LONG
                                                     ).show()
                                                 } else {
@@ -353,7 +354,7 @@ fun ProfileDialog(
                                             },
                                             onAdClosed = { earned ->
                                                 if (!earned) {
-                                                    Toast.makeText(context, "Ad was closed early. Please watch full ad to count toward your 10-ad goal.", Toast.LENGTH_SHORT).show()
+                                                    Toast.makeText(context, "Ad was closed early. Please watch full ad to count toward your ${AdManager.oneMonthMemberTargetAds}-ad goal.", Toast.LENGTH_SHORT).show()
                                                 }
                                             }
                                         )
@@ -378,6 +379,7 @@ fun ProfileDialog(
                             }
                         }
                     }
+                }
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))

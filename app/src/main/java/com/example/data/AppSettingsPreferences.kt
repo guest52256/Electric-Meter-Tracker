@@ -15,6 +15,7 @@ class AppSettingsPreferences(private val context: Context) {
     companion object {
         const val PREFS_NAME = "meter_app_settings_prefs"
         const val KEY_UNIT_THRESHOLD = "key_alert_unit_threshold"
+        const val KEY_ADMIN_MODE_ENABLED = "key_admin_mode_enabled"
         const val DEFAULT_UNIT_THRESHOLD = 100.0
     }
 
@@ -24,9 +25,23 @@ class AppSettingsPreferences(private val context: Context) {
     private val _unitThreshold = MutableStateFlow(loadUnitThreshold())
     val unitThreshold: StateFlow<Double> = _unitThreshold.asStateFlow()
 
+    private val _adminModeEnabled = MutableStateFlow(loadAdminModeEnabled())
+    val adminModeEnabled: StateFlow<Boolean> = _adminModeEnabled.asStateFlow()
+
     private fun loadUnitThreshold(): Double {
         val strVal = prefs.getString(KEY_UNIT_THRESHOLD, null)
         return strVal?.toDoubleOrNull() ?: prefs.getFloat(KEY_UNIT_THRESHOLD, DEFAULT_UNIT_THRESHOLD.toFloat()).toDouble()
+    }
+
+    private fun loadAdminModeEnabled(): Boolean {
+        return prefs.getBoolean(KEY_ADMIN_MODE_ENABLED, false)
+    }
+
+    fun setAdminModeEnabled(enabled: Boolean) {
+        prefs.edit()
+            .putBoolean(KEY_ADMIN_MODE_ENABLED, enabled)
+            .apply()
+        _adminModeEnabled.value = enabled
     }
 
     fun setUnitThreshold(threshold: Double) {
