@@ -27,11 +27,28 @@ jobs:
 
       - name: Decode Keystore File
         run: |
-          if [ ! -z "${{ secrets.KEYSTORE_BASE64 }}" ]; then
-            echo "${{ secrets.KEYSTORE_BASE64 }}" | base64 --decode > my-upload-key.jks
-            echo "Keystore successfully decoded!"
+          B64_DATA="${{ secrets.KEYSTORE_BASE64 }}"
+          PATH_SECRET="${{ secrets.KEYSTORE_PATH }}"
+          
+          TARGET_PATH="my-upload-key.jks"
+          
+          # If KEYSTORE_PATH secret is provided, determine if it's a file path or direct Base64 content
+          if [ ! -z "$PATH_SECRET" ]; then
+            if [ ${#PATH_SECRET} -lt 100 ]; then
+              TARGET_PATH="$PATH_SECRET"
+            else
+              if [ -z "$B64_DATA" ]; then
+                B64_DATA="$PATH_SECRET"
+              fi
+            fi
+          fi
+
+          if [ ! -z "$B64_DATA" ]; then
+            mkdir -p "$(dirname "$TARGET_PATH")"
+            echo "$B64_DATA" | base64 --decode > "$TARGET_PATH"
+            echo "Keystore successfully decoded to $TARGET_PATH"
           else
-            echo "No KEYSTORE_BASE64 secret provided. Skipping signing step."
+            echo "No base64 keystore data detected. Proceeding with default/checked-in keystore configurations."
           fi
         working-directory: ${{ github.workspace }}
 
@@ -41,7 +58,7 @@ jobs:
       - name: Build Release APK (assembleRelease)
         run: gradle assembleRelease
         env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || 'my-upload-key.jks' }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
@@ -49,7 +66,7 @@ jobs:
       - name: Build Release App Bundle (bundleRelease)
         run: gradle bundleRelease
         env:
-          KEYSTORE_PATH: ${{ github.workspace }}/my-upload-key.jks
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || 'my-upload-key.jks' }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
