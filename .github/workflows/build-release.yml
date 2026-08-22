@@ -173,7 +173,7 @@ jobs:
         shell: bash
         run: |
           set -e
-          DATETIME=$(date +'%d-%m-%Y %I:%M %p')
+          DATETIME=$(date +'%d-%m-%Y %I-%M %p')
           VERSION="v1.0.0"
           APP_NAME="Electric Meter Tracker"
           TYPE="Release APK"
