@@ -169,40 +169,68 @@ jobs:
             -PKEY_ALIAS="$KEY_ALIAS" \
             -PKEY_PASSWORD="$KEY_PASSWORD"
 
-      - name: Verify Release APK Output
+      - name: Generate Dynamic Release Info
         shell: bash
         run: |
           set -e
-          APK_PATH="app/build/outputs/apk/release/app-release.apk"
-          if [ -f "$APK_PATH" ] && [ -s "$APK_PATH" ]; then
-            echo "SUCCESS: Release APK found at $APK_PATH"
+          DATETIME=$(date +'%d-%m-%Y %I:%M %p')
+          VERSION="v1.0.0"
+          APP_NAME="Electric Meter Tracker"
+          TYPE="Release APK"
+          
+          # Construct file name and release name
+          FILE_NAME="$APP_NAME $TYPE $VERSION $DATETIME"
+          
+          # Construct sanitized tag name (replace spaces and colons with hyphens)
+          TAG_NAME=$(echo "$FILE_NAME" | tr ' :' '--' | tr -s '-')
+          
+          echo "FILE_NAME=$FILE_NAME" >> "$GITHUB_ENV"
+          echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
+          echo "RELEASE_NAME=$FILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Verify and Format Release APK Output
+        shell: bash
+        run: |
+          set -e
+          ORIG_APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$ORIG_APK_PATH" ] && [ -s "$ORIG_APK_PATH" ]; then
+            echo "SUCCESS: Release APK found at $ORIG_APK_PATH"
           else
-            echo "ERROR: Expected Release APK not found or is empty at $APK_PATH."
+            echo "ERROR: Expected Release APK not found or is empty at $ORIG_APK_PATH."
             echo "Searching only inside app/build/outputs/apk..."
             if [ -d "app/build/outputs/apk" ]; then
               find app/build/outputs/apk -type f -name "*.apk"
               FOUND_APK=$(find app/build/outputs/apk -type f -name "app-release.apk" -size +0c | head -n 1)
               if [ -n "$FOUND_APK" ]; then
                 echo "Found release APK at $FOUND_APK"
-                exit 0
+                cp "$FOUND_APK" "$ORIG_APK_PATH"
+              else
+                exit 1
               fi
+            else
+              exit 1
             fi
-            exit 1
           fi
+          
+          # Copy to final formatted path inside runner temp
+          FINAL_APK="$RUNNER_TEMP/${{ env.FILE_NAME }}.apk"
+          cp "$ORIG_APK_PATH" "$FINAL_APK"
+          echo "FINAL_APK_PATH=$FINAL_APK" >> "$GITHUB_ENV"
+          echo "Prepared dynamic release APK at $FINAL_APK"
 
       - name: Upload Release APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
+          path: ${{ env.FINAL_APK_PATH }}
           if-no-files-found: error
 
       - name: Upload Release APK to GitHub Releases
         uses: softprops/action-gh-release@v2
         with:
-          files: app/build/outputs/apk/release/app-release.apk
-          tag_name: release-${{ github.run_number }}
-          name: "Release v1.0.${{ github.run_number }}"
+          files: ${{ env.FINAL_APK_PATH }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
           body: "Automated Release APK build."
           draft: false
           prerelease: false
