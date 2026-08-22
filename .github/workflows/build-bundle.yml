@@ -70,6 +70,20 @@ jobs:
 
           echo "Gradle 9.5.0 verified successfully."
 
+      - name: Set up Debug Keystore
+        shell: bash
+        run: |
+          set -e
+          if [ -f "debug.keystore.base64" ]; then
+            echo "Decoding existing debug.keystore.base64 from repository..."
+            base64 --decode debug.keystore.base64 > debug.keystore
+          else
+            echo "No debug.keystore.base64 found in repository, generating a new debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
+
       - name: Decode and setup keystore
         shell: bash
         env:
