@@ -177,9 +177,14 @@ jobs:
         shell: bash
         run: |
           set -e
-          DATETIME=$(date +'%d-%m-%Y %I-%M %p')
+          DATETIME=$(TZ="Asia/Karachi" date +'%d-%m-%Y %I-%M %p')
           VERSION="v1.0.0"
-          APP_NAME="Electric Meter Tracker"
+          
+          # Extract repo name from repository path e.g. "user/Electric-Meter-Tracker" -> "Electric-Meter-Tracker"
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          # Replace hyphens and underscores with spaces to format nicely as an app name
+          APP_NAME=$(echo "$REPO_NAME" | tr '_-' ' ')
+          
           TYPE="Debug APK"
           
           # Construct file name and release name
