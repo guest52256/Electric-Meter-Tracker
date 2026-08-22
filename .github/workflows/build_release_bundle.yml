@@ -1,4 +1,4 @@
-name: Android CI & Build (APKs & Bundle)
+name: Build Release App Bundle
 
 on:
   push:
@@ -8,8 +8,8 @@ on:
   workflow_dispatch:
 
 jobs:
-  build:
-    name: Build Debug/Release APKs & App Bundle
+  build-release-bundle:
+    name: Build Signed App Bundle (bundleRelease)
     runs-on: ubuntu-latest
 
     steps:
@@ -25,14 +25,13 @@ jobs:
       - name: Setup Gradle
         uses: gradle/actions/setup-gradle@v3
 
-      - name: Decode Keystore File
+      - name: Decode Keystore / Setup Key File
         run: |
           B64_DATA="${{ secrets.KEYSTORE_BASE64 }}"
           PATH_SECRET="${{ secrets.KEYSTORE_PATH }}"
           
           TARGET_PATH="my-upload-key.jks"
           
-          # If KEYSTORE_PATH secret is provided, determine if it's a file path or direct Base64 content
           if [ ! -z "$PATH_SECRET" ]; then
             if [ ${#PATH_SECRET} -lt 100 ]; then
               TARGET_PATH="$PATH_SECRET"
@@ -48,22 +47,11 @@ jobs:
             echo "$B64_DATA" | base64 --decode > "$TARGET_PATH"
             echo "Keystore successfully decoded to $TARGET_PATH"
           else
-            echo "No base64 keystore data detected. Proceeding with default/checked-in keystore configurations."
+            echo "No base64 keystore data detected. Proceeding with KEYSTORE_PATH."
           fi
         working-directory: ${{ github.workspace }}
 
-      - name: Build Debug APK (assembleDebug)
-        run: gradle assembleDebug
-
-      - name: Build Release APK (assembleRelease)
-        run: gradle assembleRelease
-        env:
-          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || 'my-upload-key.jks' }}
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
-          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
-          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
-
-      - name: Build Release App Bundle (bundleRelease)
+      - name: Build Release App Bundle
         run: gradle bundleRelease
         env:
           KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH || 'my-upload-key.jks' }}
@@ -71,19 +59,7 @@ jobs:
           KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
 
-      - name: Upload Debug APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-debug-apk
-          path: app/build/outputs/apk/debug/app-debug.apk
-
-      - name: Upload Release APK
-        uses: actions/upload-artifact@v4
-        with:
-          name: app-release-apk
-          path: app/build/outputs/apk/release/app-release.apk
-
-      - name: Upload Release AAB (App Bundle)
+      - name: Upload Release App Bundle Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app-release-bundle
