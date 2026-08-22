@@ -1,0 +1,118 @@
+name: Build Release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Verify Java environment
+        run: |
+          java -version
+          echo "JAVA_HOME is $JAVA_HOME"
+          JAVA_VERSION_STR=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+          if [ -z "$JAVA_VERSION_STR" ]; then
+            echo "Error: Java version cannot be detected."
+            exit 1
+          fi
+          JAVA_VER=$(echo "$JAVA_VERSION_STR" | cut -d'.' -f1)
+          if [ "$JAVA_VER" = "1" ]; then
+            JAVA_VER=$(echo "$JAVA_VERSION_STR" | cut -d'.' -f2)
+          fi
+          echo "Detected Java major version: $JAVA_VER"
+          if [ "$JAVA_VER" -lt 17 ]; then
+            echo "Error: Java is below 17."
+            exit 1
+          fi
+
+      - name: Set up Gradle 9.5.0
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Verify Gradle version
+        run: |
+          GRADLE_VER=$(gradle -v | grep 'Gradle' | awk '{print $2}')
+          echo "Detected Gradle version: $GRADLE_VER"
+          if [ "$GRADLE_VER" != "9.5.0" ]; then
+            echo "Error: Gradle version is $GRADLE_VER, but exactly 9.5.0 is required."
+            exit 1
+          fi
+
+      - name: Verify signing configuration
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          if [ -z "$KEYSTORE_PATH" ]; then
+            echo "Error: KEYSTORE_PATH secret is missing."
+            exit 1
+          fi
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "Error: KEYSTORE_PASSWORD secret is missing."
+            exit 1
+          fi
+          if [ -z "$KEY_ALIAS" ]; then
+            echo "Error: KEY_ALIAS secret is missing."
+            exit 1
+          fi
+          if [ -z "$KEY_PASSWORD" ]; then
+            echo "Error: KEY_PASSWORD secret is missing."
+            exit 1
+          fi
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "Error: The keystore file referenced by KEYSTORE_PATH does not exist."
+            exit 1
+          fi
+          echo "Signing configuration verified successfully."
+
+      - name: Build Release APK
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          gradle :app:assembleRelease --stacktrace --no-daemon -PKEYSTORE_PATH="$KEYSTORE_PATH" -PKEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" -PKEY_ALIAS="$KEY_ALIAS" -PKEY_PASSWORD="$KEY_PASSWORD"
+
+      - name: Verify Release APK Output
+        run: |
+          APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$APK_PATH" ] && [ -s "$APK_PATH" ]; then
+            echo "Success: Release APK is generated successfully and verified."
+          else
+            echo "Error: Expected APK does not exist or is empty at $APK_PATH. Searching inside app/build/outputs/apk..."
+            FOUND_APK=$(find app/build/outputs/apk -type f -name "*.apk" ! -name "*debug*" ! -name "*androidTest*" ! -name "*unaligned*" -size +0c | head -n 1)
+            if [ -z "$FOUND_APK" ]; then
+              echo "Error: No valid release APK found in app/build/outputs/apk."
+              exit 1
+            fi
+            echo "Found release APK at $FOUND_APK. Copying to $APK_PATH"
+            mkdir -p app/build/outputs/apk/release
+            cp "$FOUND_APK" "$APK_PATH"
+          fi
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: app/build/outputs/apk/release/app-release.apk
+          if-no-files-found: error
