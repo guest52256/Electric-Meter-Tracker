@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: read
+  contents: write
 
 jobs:
   build:
@@ -196,3 +196,15 @@ jobs:
           name: app-release-aab
           path: app/build/outputs/bundle/release/app-release.aab
           if-no-files-found: error
+
+      - name: Upload Release AAB to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/bundle/release/app-release.aab
+          tag_name: release-bundle-${{ github.run_number }}
+          name: "Release Bundle v1.0.${{ github.run_number }}"
+          body: "Automated Release AAB build."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

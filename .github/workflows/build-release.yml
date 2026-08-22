@@ -196,3 +196,15 @@ jobs:
           name: app-release-apk
           path: app/build/outputs/apk/release/app-release.apk
           if-no-files-found: error
+
+      - name: Upload Release APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: app/build/outputs/apk/release/app-release.apk
+          tag_name: release-${{ github.run_number }}
+          name: "Release v1.0.${{ github.run_number }}"
+          body: "Automated Release APK build."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
