@@ -12,6 +12,7 @@ plugins {
 android {
   namespace = "com.example"
   compileSdk { version = release(36) { minorApiLevel = 1 } }
+  buildToolsVersion = "36.0.0"
 
   defaultConfig {
     applicationId = "sadaqat.kinzadigitalhub.electricmetertracker"
@@ -47,10 +48,25 @@ android {
       }
     }
     create("debugConfig") {
-      storeFile = file("${rootDir}/debug.keystore")
-      storePassword = "android"
-      keyAlias = "androiddebugkey"
-      keyPassword = "android"
+      val keystorePath = (project.findProperty("KEYSTORE_PATH") as? String)
+        ?: System.getenv("KEYSTORE_PATH")
+      val uploadKeyFile = if (keystorePath != null) file(keystorePath) else null
+      if (uploadKeyFile != null && uploadKeyFile.exists()) {
+        storeFile = uploadKeyFile
+        storePassword = (project.findProperty("KEYSTORE_PASSWORD") as? String)
+          ?: System.getenv("KEYSTORE_PASSWORD")
+          ?: System.getenv("STORE_PASSWORD")
+        keyAlias = (project.findProperty("KEY_ALIAS") as? String)
+          ?: System.getenv("KEY_ALIAS")
+          ?: "upload"
+        keyPassword = (project.findProperty("KEY_PASSWORD") as? String)
+          ?: System.getenv("KEY_PASSWORD")
+      } else {
+        storeFile = file("${rootDir}/debug.keystore")
+        storePassword = "android"
+        keyAlias = "androiddebugkey"
+        keyPassword = "android"
+      }
     }
   }
 
@@ -64,8 +80,8 @@ android {
     debug { signingConfig = signingConfigs.getByName("debugConfig") }
   }
   compileOptions {
-    sourceCompatibility = JavaVersion.VERSION_11
-    targetCompatibility = JavaVersion.VERSION_11
+    sourceCompatibility = JavaVersion.VERSION_17
+    targetCompatibility = JavaVersion.VERSION_17
   }
   buildFeatures {
     compose = true

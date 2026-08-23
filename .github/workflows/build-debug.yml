@@ -47,10 +47,19 @@ jobs:
           fi
           echo "Java version verified successfully."
 
-      - name: Set up Gradle 9.5.0
+      - name: Set up Android SDK Build Tools 36.0.0
+        shell: bash
+        run: |
+          set -e
+          echo "Setting up Android SDK Build Tools 36.0.0..."
+          yes | sdkmanager --licenses || true
+          sdkmanager "build-tools;36.0.0" "platforms;android-36" || true
+          echo "Android SDK setup complete."
+
+      - name: Set up Gradle 9.7.1
         uses: gradle/actions/setup-gradle@v5
         with:
-          gradle-version: "9.5.0"
+          gradle-version: "9.7.1"
 
       - name: Verify Gradle version
         shell: bash
@@ -66,26 +75,12 @@ jobs:
             exit 1
           fi
 
-          if [ "$GRADLE_VER" != "9.5.0" ]; then
-            echo "ERROR: Gradle version is $GRADLE_VER, but exactly 9.5.0 is required."
+          if [ "$GRADLE_VER" != "9.7.1" ]; then
+            echo "ERROR: Gradle version is $GRADLE_VER, but exactly 9.7.1 is required."
             exit 1
           fi
 
-          echo "Gradle 9.5.0 verified successfully."
-
-      - name: Set up Debug Keystore
-        shell: bash
-        run: |
-          set -e
-          if [ -f "debug.keystore.base64" ]; then
-            echo "Decoding existing debug.keystore.base64 from repository..."
-            base64 --decode debug.keystore.base64 > debug.keystore
-          else
-            echo "No debug.keystore.base64 found in repository, generating a new debug.keystore..."
-            keytool -genkey -v -keystore debug.keystore -storepass android \
-              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
-              -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
-          fi
+          echo "Gradle 9.7.1 verified successfully."
 
       - name: Decode and setup keystore
         shell: bash
