@@ -392,7 +392,7 @@ object AdManager {
         if (!adsEnabled) return false
         if (!bannerAdsEnabled) return false
 
-        val currentUser = FirebaseAuth.getInstance().currentUser
+        val currentUser = FirebaseInitializer.getAuth(context)?.currentUser
         if (currentUser != null) {
             if (!googleUserAdsEnabled) return false
         } else {
@@ -408,7 +408,7 @@ object AdManager {
         if (!adsEnabled) return false
         if (!bannerAdsEnabled) return false
 
-        val currentUser = FirebaseAuth.getInstance().currentUser
+        val currentUser = FirebaseInitializer.getAuth(context)?.currentUser
         val isGoogleUser = currentUser != null
 
         if (isGoogleUser) {
@@ -434,7 +434,7 @@ object AdManager {
      */
     fun getResolvedAdTypeForAction(context: Context, buttonId: String): String? {
         // Determine user type
-        val currentUser = FirebaseAuth.getInstance().currentUser
+        val currentUser = FirebaseInitializer.getAuth(context)?.currentUser
         val isGoogleUser = currentUser != null
         val userSuffix = if (isGoogleUser) "google_user" else "guest"
         val docId = "${buttonId}_${userSuffix}"

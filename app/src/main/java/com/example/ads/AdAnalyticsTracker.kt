@@ -145,11 +145,11 @@ object AdAnalyticsTracker {
     fun logAdImpression(context: Context, adType: String) {
         val appContext = context.applicationContext
         val deviceId = getDeviceId(appContext)
-        val auth = FirebaseAuth.getInstance()
-        val user = auth.currentUser
+        val auth = FirebaseInitializer.getAuth(appContext)
+        val user = auth?.currentUser
         val isGoogleUser = user != null && !user.isAnonymous
         val userType = if (isGoogleUser) "google" else "guest"
-        val userId = if (isGoogleUser) user!!.uid else deviceId
+        val userId = if (isGoogleUser) (user?.uid ?: deviceId) else deviceId
         val userEmail = if (isGoogleUser) (user?.email ?: "google_user") else "guest_user"
 
         val dateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.ENGLISH)
@@ -242,7 +242,7 @@ object AdAnalyticsTracker {
         scope.launch {
             try {
                 val db = try {
-                    FirebaseFirestore.getInstance()
+                    FirebaseInitializer.getFirestore(null)
                 } catch (e: Throwable) {
                     null
                 } ?: return@launch

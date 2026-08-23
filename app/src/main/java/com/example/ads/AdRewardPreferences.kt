@@ -60,38 +60,50 @@ class AdRewardPreferences(private val context: Context) {
     }
 
     fun loadState(): AdRewardState {
-        val prefs = getPrefs()
-        val user = FirebaseInitializer.getAuth(context)?.currentUser
-        val isGoogleUser = user != null
+        return try {
+            val prefs = getPrefs()
+            val user = FirebaseInitializer.getAuth(context)?.currentUser
+            val isGoogleUser = user != null
 
-        val now = System.currentTimeMillis()
-        val exemptUntil = prefs.getLong(KEY_EXEMPT_UNTIL, 0L)
-        // Exemption is only valid for Google logged-in users who earned it
-        val isExempt = isGoogleUser && (exemptUntil > now)
+            val now = System.currentTimeMillis()
+            val exemptUntil = prefs.getLong(KEY_EXEMPT_UNTIL, 0L)
+            // Exemption is only valid for Google logged-in users who earned it
+            val isExempt = isGoogleUser && (exemptUntil > now)
 
-        val remaining = if (isExempt) {
-            0
-        } else {
-            val savedRemaining = prefs.getInt(KEY_REMAINING_ADS, REQUIRED_ADS_COUNT)
-            savedRemaining.coerceIn(0, REQUIRED_ADS_COUNT)
+            val maxTarget = REQUIRED_ADS_COUNT.coerceAtLeast(1)
+            val remaining = if (isExempt) {
+                0
+            } else {
+                val savedRemaining = prefs.getInt(KEY_REMAINING_ADS, maxTarget)
+                savedRemaining.coerceIn(0, maxTarget)
+            }
+
+            val watched = prefs.getInt(KEY_WATCHED_COUNT, 0)
+
+            val formattedDate = if (exemptUntil > 0L) {
+                SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(exemptUntil))
+            } else {
+                ""
+            }
+
+            AdRewardState(
+                remainingAdsToWatch = remaining,
+                isMonthExemptActive = isExempt,
+                exemptUntilTimestamp = exemptUntil,
+                exemptUntilFormattedDate = formattedDate,
+                totalAdsWatchedThisCycle = watched,
+                isGoogleUser = isGoogleUser
+            )
+        } catch (e: Exception) {
+            AdRewardState(
+                remainingAdsToWatch = 10,
+                isMonthExemptActive = false,
+                exemptUntilTimestamp = 0L,
+                exemptUntilFormattedDate = "",
+                totalAdsWatchedThisCycle = 0,
+                isGoogleUser = false
+            )
         }
-
-        val watched = prefs.getInt(KEY_WATCHED_COUNT, 0)
-
-        val formattedDate = if (exemptUntil > 0L) {
-            SimpleDateFormat("dd MMMM yyyy", Locale.getDefault()).format(Date(exemptUntil))
-        } else {
-            ""
-        }
-
-        return AdRewardState(
-            remainingAdsToWatch = remaining,
-            isMonthExemptActive = isExempt,
-            exemptUntilTimestamp = exemptUntil,
-            exemptUntilFormattedDate = formattedDate,
-            totalAdsWatchedThisCycle = watched,
-            isGoogleUser = isGoogleUser
-        )
     }
 
     /**

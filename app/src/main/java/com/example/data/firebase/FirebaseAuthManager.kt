@@ -55,11 +55,11 @@ class FirebaseAuthManager(private val context: Context) {
     }
 
     fun isUserSignedInWithGoogle(): Boolean {
-        return auth.currentUser != null && !prefs.getBoolean("is_guest_mode", false)
+        return auth?.currentUser != null && !prefs.getBoolean("is_guest_mode", false)
     }
 
     fun isGuestMode(): Boolean {
-        return prefs.getBoolean("is_guest_mode", false) || auth.currentUser == null
+        return prefs.getBoolean("is_guest_mode", false) || auth?.currentUser == null
     }
 
     fun setGuestMode(context: Context) {
