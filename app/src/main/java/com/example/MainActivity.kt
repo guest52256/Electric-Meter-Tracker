@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.example.ads.AdManager
+import com.example.data.firebase.FirebaseInitializer
 import com.example.ui.MainAppScreen
 import com.example.ui.navigation.Screen
 import com.example.ui.theme.MyApplicationTheme
@@ -67,25 +68,7 @@ class MainActivity : ComponentActivity() {
     super.onCreate(savedInstanceState)
     
     // Guarantees Firebase is initialized first before any other lazy property or ViewModel gets evaluated
-    try {
-      val appContext = applicationContext
-      if (com.google.firebase.FirebaseApp.getApps(appContext).isEmpty()) {
-        try {
-          com.google.firebase.FirebaseApp.initializeApp(appContext)
-        } catch (e: Exception) {
-          val options = com.google.firebase.FirebaseOptions.Builder()
-            .setApplicationId("1:965439409911:android:aecb605b6222d36696cdf2")
-            .setApiKey("AIzaSyDvCAx1EU-o0XztFDbt7isO44vh-jSqI1Q")
-            .setProjectId("kinza-digital-hub")
-            .setStorageBucket("kinza-digital-hub.firebasestorage.app")
-            .setGcmSenderId("965439409911")
-            .build()
-          com.google.firebase.FirebaseApp.initializeApp(appContext, options)
-        }
-      }
-    } catch (e: Exception) {
-      android.util.Log.e("MainActivity", "Firebase manual init failed", e)
-    }
+    FirebaseInitializer.ensureInitialized(this)
 
     enableEdgeToEdge()
 

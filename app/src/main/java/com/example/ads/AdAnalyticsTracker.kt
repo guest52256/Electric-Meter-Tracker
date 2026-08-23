@@ -4,6 +4,7 @@ import android.content.Context
 import android.content.SharedPreferences
 import android.provider.Settings
 import android.util.Log
+import com.example.data.firebase.FirebaseInitializer
 import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.google.firebase.firestore.SetOptions
@@ -240,7 +241,11 @@ object AdAnalyticsTracker {
     ) {
         scope.launch {
             try {
-                val db = FirebaseFirestore.getInstance()
+                val db = try {
+                    FirebaseFirestore.getInstance()
+                } catch (e: Throwable) {
+                    null
+                } ?: return@launch
 
                 val dailySummaryData = hashMapOf<String, Any>(
                     "date" to date,

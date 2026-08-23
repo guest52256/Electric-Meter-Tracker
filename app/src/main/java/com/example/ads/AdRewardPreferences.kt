@@ -2,6 +2,7 @@ package com.example.ads
 
 import android.content.Context
 import android.content.SharedPreferences
+import com.example.data.firebase.FirebaseInitializer
 import com.google.firebase.auth.FirebaseAuth
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -42,7 +43,7 @@ class AdRewardPreferences(private val context: Context) {
     }
 
     private fun getPrefs(): SharedPreferences {
-        val user = FirebaseAuth.getInstance().currentUser
+        val user = FirebaseInitializer.getAuth(context)?.currentUser
         val prefName = if (user != null) {
             "ad_reward_prefs_${user.uid}"
         } else {
@@ -60,7 +61,7 @@ class AdRewardPreferences(private val context: Context) {
 
     fun loadState(): AdRewardState {
         val prefs = getPrefs()
-        val user = FirebaseAuth.getInstance().currentUser
+        val user = FirebaseInitializer.getAuth(context)?.currentUser
         val isGoogleUser = user != null
 
         val now = System.currentTimeMillis()

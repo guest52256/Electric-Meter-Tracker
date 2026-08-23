@@ -198,29 +198,7 @@ class FirestoreSyncManager(
 
     val firestore: FirebaseFirestore? by lazy {
         try {
-            if (FirebaseApp.getApps(context).isEmpty()) {
-                try {
-                    FirebaseApp.initializeApp(context)
-                } catch (e: Exception) {
-                    val options = FirebaseOptions.Builder()
-                        .setApplicationId("1:965439409911:android:aecb605b6222d36696cdf2")
-                        .setApiKey("AIzaSyDvCAx1EU-o0XztFDbt7isO44vh-jSqI1Q")
-                        .setProjectId("kinza-digital-hub")
-                        .setStorageBucket("kinza-digital-hub.firebasestorage.app")
-                        .setGcmSenderId("965439409911")
-                        .build()
-                    FirebaseApp.initializeApp(context, options)
-                }
-            }
-            val db = FirebaseFirestore.getInstance()
-            try {
-                val settings = com.google.firebase.firestore.FirebaseFirestoreSettings.Builder()
-                    .setPersistenceEnabled(true)
-                    .build()
-                db.firestoreSettings = settings
-            } catch (se: Exception) {
-                Log.w(tag, "FirestoreSettings already applied or skipped: ${se.message}")
-            }
+            val db = FirebaseInitializer.getFirestore(context)
             Log.d(tag, "Firebase Firestore initialized for project: kinza-digital-hub, device: $deviceId")
             db
         } catch (e: Throwable) {

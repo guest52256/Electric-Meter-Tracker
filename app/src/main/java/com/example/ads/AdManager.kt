@@ -6,6 +6,7 @@ import android.content.ContextWrapper
 import android.os.Handler
 import android.os.Looper
 import android.util.Log
+import com.example.data.firebase.FirebaseInitializer
 import com.example.data.models.ButtonAdConfig
 import com.google.android.gms.ads.AdError
 import com.google.android.gms.ads.AdRequest
@@ -141,25 +142,8 @@ object AdManager {
      * Initializes Google Mobile Ads SDK, listeners, and trackers.
      */
     fun initialize(context: Context) {
-        val appContext = context.applicationContext
-        try {
-            if (com.google.firebase.FirebaseApp.getApps(appContext).isEmpty()) {
-                try {
-                    com.google.firebase.FirebaseApp.initializeApp(appContext)
-                } catch (e: Exception) {
-                    val options = com.google.firebase.FirebaseOptions.Builder()
-                        .setApplicationId("1:965439409911:android:aecb605b6222d36696cdf2")
-                        .setApiKey("AIzaSyDvCAx1EU-o0XztFDbt7isO44vh-jSqI1Q")
-                        .setProjectId("kinza-digital-hub")
-                        .setStorageBucket("kinza-digital-hub.firebasestorage.app")
-                        .setGcmSenderId("965439409911")
-                        .build()
-                    com.google.firebase.FirebaseApp.initializeApp(appContext, options)
-                }
-            }
-        } catch (e: Exception) {
-            Log.e(TAG, "Error initializing FirebaseApp in AdManager", e)
-        }
+        val appContext = context.applicationContext ?: context
+        FirebaseInitializer.ensureInitialized(appContext)
 
         if (adRewardPreferences == null) {
             adRewardPreferences = AdRewardPreferences(appContext)
@@ -173,7 +157,7 @@ object AdManager {
                 loadInterstitialAd(appContext)
                 loadRewardedAd(appContext)
             }
-            listenToRemoteConfig()
+            listenToRemoteConfig(appContext)
         } catch (e: Exception) {
             Log.e(TAG, "Error initializing MobileAds", e)
         }
@@ -182,9 +166,17 @@ object AdManager {
     /**
      * Set up real-time Firestore listeners for both global settings and button-level configurations.
      */
-    fun listenToRemoteConfig() {
+    fun listenToRemoteConfig(context: Context? = null) {
         try {
-            val db = FirebaseFirestore.getInstance()
+            val db = if (context != null) {
+                FirebaseInitializer.getFirestore(context)
+            } else {
+                try {
+                    FirebaseFirestore.getInstance()
+                } catch (e: Throwable) {
+                    null
+                }
+            } ?: return
 
             // 1. Listen to admin settings
             adminSettingsListener?.remove()
