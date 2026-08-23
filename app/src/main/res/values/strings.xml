@@ -1,0 +1,7 @@
+<resources>
+    <string name="app_name">Electric Meter Tracker</string>
+    <string name="widget_description">Shows the latest electric meter reading and current billing cycle consumed units.</string>
+    <string name="widget_title">Meter Readings</string>
+    <string name="widget_latest_reading">Latest Reading</string>
+    <string name="widget_cycle_units">Cycle Consumed</string>
+</resources>

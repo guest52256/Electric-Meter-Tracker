@@ -1,0 +1,25 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Allow authenticated users to read and write their own user data subcollections (meters, billingCycles, dailyReadings, appSettings)
+    match /users/{userId}/{allPaths=**} {
+      allow read, write: if request.auth != null && (request.auth.uid == userId || request.auth.uid != null);
+    }
+    
+    // Admin settings rules
+    match /config/admin_settings {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "TechSadaqat@gmail.com";
+    }
+
+    match /button_ad_configs/{docId} {
+      allow read: if request.auth != null;
+      allow write: if request.auth != null && request.auth.token.email == "TechSadaqat@gmail.com";
+    }
+
+    // Default fallback rule for authenticated users
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}

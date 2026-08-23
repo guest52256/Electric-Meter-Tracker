@@ -1,0 +1,7 @@
+{
+  "name": "Electric Meter Tracker",
+  "description": "Electric meter reading, daily consumption tracking, automated billing cycle unit calculations, and 100+ unit high usage alerts.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
+

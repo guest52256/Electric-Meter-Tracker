@@ -1,0 +1,243 @@
+name: Build Release APK
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Set up Java 17
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: "17"
+
+      - name: Verify Java environment
+        shell: bash
+        run: |
+          set -e
+          java -version
+          echo "JAVA_HOME is $JAVA_HOME"
+          JAVA_VERSION_STR=$(java -version 2>&1 | head -n 1 | awk -F '"' '{print $2}')
+          if [ -z "$JAVA_VERSION_STR" ]; then
+            echo "ERROR: Could not detect Java version."
+            exit 1
+          fi
+          JAVA_VER=$(echo "$JAVA_VERSION_STR" | cut -d'.' -f1)
+          if [ "$JAVA_VER" = "1" ]; then
+            JAVA_VER=$(echo "$JAVA_VERSION_STR" | cut -d'.' -f2)
+          fi
+          echo "Detected Java major version: $JAVA_VER"
+          if [ -z "$JAVA_VER" ] || [ "$JAVA_VER" -lt 17 ]; then
+            echo "ERROR: Java version $JAVA_VER is below 17."
+            exit 1
+          fi
+          echo "Java version verified successfully."
+
+      - name: Set up Gradle 9.5.0
+        uses: gradle/actions/setup-gradle@v5
+        with:
+          gradle-version: "9.5.0"
+
+      - name: Verify Gradle version
+        shell: bash
+        run: |
+          set -e
+
+          GRADLE_VER=$(gradle --version | sed -nE 's/^Gradle ([0-9]+\.[0-9]+(\.[0-9]+)?).*$/\1/p' | head -n 1)
+
+          echo "Detected Gradle version: $GRADLE_VER"
+
+          if [ -z "$GRADLE_VER" ]; then
+            echo "ERROR: Could not detect Gradle version."
+            exit 1
+          fi
+
+          if [ "$GRADLE_VER" != "9.5.0" ]; then
+            echo "ERROR: Gradle version is $GRADLE_VER, but exactly 9.5.0 is required."
+            exit 1
+          fi
+
+          echo "Gradle 9.5.0 verified successfully."
+
+      - name: Set up Debug Keystore
+        shell: bash
+        run: |
+          set -e
+          if [ -f "debug.keystore.base64" ]; then
+            echo "Decoding existing debug.keystore.base64 from repository..."
+            base64 --decode debug.keystore.base64 > debug.keystore
+          else
+            echo "No debug.keystore.base64 found in repository, generating a new debug.keystore..."
+            keytool -genkey -v -keystore debug.keystore -storepass android \
+              -alias androiddebugkey -keypass android -keyalg RSA -keysize 2048 \
+              -validity 10000 -dname "CN=Android Debug,O=Android,C=US" -noprompt
+          fi
+
+      - name: Decode and setup keystore
+        shell: bash
+        env:
+          KEYSTORE_PATH: ${{ secrets.KEYSTORE_PATH }}
+        run: |
+          set -e
+
+          if [ -z "$KEYSTORE_PATH" ]; then
+            echo "ERROR: KEYSTORE_PATH secret is missing."
+            exit 1
+          fi
+
+          KEYSTORE_FILE="$RUNNER_TEMP/Kinza KeyStore.jks"
+
+          echo "$KEYSTORE_PATH" | base64 --decode > "$KEYSTORE_FILE"
+
+          if [ ! -f "$KEYSTORE_FILE" ]; then
+            echo "ERROR: Failed to create the JKS keystore file."
+            exit 1
+          fi
+
+          if [ ! -s "$KEYSTORE_FILE" ]; then
+            echo "ERROR: Decoded JKS keystore is empty."
+            exit 1
+          fi
+
+          echo "KEYSTORE_PATH=$KEYSTORE_FILE" >> "$GITHUB_ENV"
+
+          echo "JKS keystore prepared successfully in temporary runner storage."
+
+      - name: Verify signing configuration
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+
+          if [ -z "$KEYSTORE_PATH" ]; then
+            echo "ERROR: KEYSTORE_PATH was not initialized."
+            exit 1
+          fi
+
+          if [ ! -f "$KEYSTORE_PATH" ]; then
+            echo "ERROR: Decoded keystore file does not exist."
+            exit 1
+          fi
+
+          if [ ! -s "$KEYSTORE_PATH" ]; then
+            echo "ERROR: Decoded keystore file is empty."
+            exit 1
+          fi
+
+          if [ -z "$KEYSTORE_PASSWORD" ]; then
+            echo "ERROR: KEYSTORE_PASSWORD secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$KEY_ALIAS" ]; then
+            echo "ERROR: KEY_ALIAS secret is missing."
+            exit 1
+          fi
+
+          if [ -z "$KEY_PASSWORD" ]; then
+            echo "ERROR: KEY_PASSWORD secret is missing."
+            exit 1
+          fi
+
+          echo "Signing configuration verified successfully."
+
+      - name: Build Release APK
+        shell: bash
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -e
+          gradle :app:assembleRelease --stacktrace --no-daemon \
+            -PKEYSTORE_PATH="$KEYSTORE_PATH" \
+            -PKEYSTORE_PASSWORD="$KEYSTORE_PASSWORD" \
+            -PKEY_ALIAS="$KEY_ALIAS" \
+            -PKEY_PASSWORD="$KEY_PASSWORD"
+
+      - name: Generate Dynamic Release Info
+        shell: bash
+        run: |
+          set -e
+          DATETIME=$(TZ="Asia/Karachi" date +'%d-%m-%Y %I-%M %p')
+          VERSION="v1.0.0"
+          
+          # Extract repo name from repository path e.g. "user/Electric-Meter-Tracker" -> "Electric-Meter-Tracker"
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          # Replace hyphens and underscores with spaces to format nicely as an app name
+          APP_NAME=$(echo "$REPO_NAME" | tr '_-' ' ')
+          
+          TYPE="Release APK"
+          
+          # Construct file name and release name
+          FILE_NAME="$APP_NAME $TYPE $VERSION $DATETIME"
+          
+          # Construct sanitized tag name (replace spaces and colons with hyphens)
+          TAG_NAME=$(echo "$FILE_NAME" | tr ' :' '--' | tr -s '-')
+          
+          echo "FILE_NAME=$FILE_NAME" >> "$GITHUB_ENV"
+          echo "TAG_NAME=$TAG_NAME" >> "$GITHUB_ENV"
+          echo "RELEASE_NAME=$FILE_NAME" >> "$GITHUB_ENV"
+
+      - name: Verify and Format Release APK Output
+        shell: bash
+        run: |
+          set -e
+          ORIG_APK_PATH="app/build/outputs/apk/release/app-release.apk"
+          if [ -f "$ORIG_APK_PATH" ] && [ -s "$ORIG_APK_PATH" ]; then
+            echo "SUCCESS: Release APK found at $ORIG_APK_PATH"
+          else
+            echo "ERROR: Expected Release APK not found or is empty at $ORIG_APK_PATH."
+            echo "Searching only inside app/build/outputs/apk..."
+            if [ -d "app/build/outputs/apk" ]; then
+              find app/build/outputs/apk -type f -name "*.apk"
+              FOUND_APK=$(find app/build/outputs/apk -type f -name "app-release.apk" -size +0c | head -n 1)
+              if [ -n "$FOUND_APK" ]; then
+                echo "Found release APK at $FOUND_APK"
+                cp "$FOUND_APK" "$ORIG_APK_PATH"
+              else
+                exit 1
+              fi
+            else
+              exit 1
+            fi
+          fi
+          
+          # Copy to final formatted path inside runner temp
+          FINAL_APK="$RUNNER_TEMP/${{ env.FILE_NAME }}.apk"
+          cp "$ORIG_APK_PATH" "$FINAL_APK"
+          echo "FINAL_APK_PATH=$FINAL_APK" >> "$GITHUB_ENV"
+          echo "Prepared dynamic release APK at $FINAL_APK"
+
+      - name: Upload Release APK Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: ${{ env.FINAL_APK_PATH }}
+          if-no-files-found: error
+
+      - name: Upload Release APK to GitHub Releases
+        uses: softprops/action-gh-release@v2
+        with:
+          files: ${{ env.FINAL_APK_PATH }}
+          tag_name: ${{ env.TAG_NAME }}
+          name: ${{ env.RELEASE_NAME }}
+          body: "Automated Release APK build."
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
