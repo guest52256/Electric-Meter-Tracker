@@ -1,0 +1,43 @@
+name: Build Windows Application
+
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Flutter SDK
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Enable Windows platform support
+        run: flutter config --enable-windows-desktop
+
+      - name: Recreate missing native Windows files
+        run: flutter create . --platforms=windows
+
+      - name: Fetch project dependencies
+        run: flutter pub get
+
+      - name: Compile Windows Executable
+        run: flutter build windows --release
+
+      - name: Package executable with required dependencies
+        run: |
+          Compress-Archive -Path build\windows\x64\runner\Release\* -DestinationPath build\windows\Electric-Meter-Tracker-Windows.zip
+
+      - name: Upload zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Electric-Meter-Tracker-Executable
+          path: build\windows\Electric-Meter-Tracker-Windows.zip
