@@ -20,14 +20,14 @@ jobs:
         with:
           distribution: 'zulu'
           java-version: '17'
-          cache: 'gradle'
 
-      - name: Grant Execute Permission for Gradle
-        run: git update-index --chmod=+x gradlew
-        shell: bash
+      - name: Set up Gradle 9.7.1
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: "9.7.1"
 
       - name: Build Windows Distribution
-        run: ./gradlew :composeApp:packageDistributionForCurrentOS --stacktrace
+        run: gradle :composeApp:packageDistributionForCurrentOS --stacktrace
 
       - name: Locate and Package Artifacts
         shell: powershell
